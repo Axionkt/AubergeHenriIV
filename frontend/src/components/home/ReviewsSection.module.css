@@ -1,0 +1,21 @@
+.reviews {
+  padding: var(--gap-xl) var(--gap-lg);
+  background: linear-gradient(
+    155deg,
+    var(--clr-dark-mid) 0%,
+    var(--clr-dark-deep) 100%
+  );
+  height: calc(100vh - var(--nav-h));
+  max-height: 800px;
+  box-sizing: border-box;
+}
+.reviewsCompact {
+  height: auto;
+}
+.reviewsInner {
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}

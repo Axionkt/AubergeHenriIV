@@ -1,0 +1,113 @@
+.page {
+  display: flex;
+  min-height: 100vh;
+  padding-top: var(--nav-h);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--clr-lavender);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: var(--nav-h);
+  height: calc(100vh - var(--nav-h));
+  overflow-y: auto;
+}
+
+.sidebarBrand {
+  padding: var(--gap-lg);
+  border-bottom: 1px solid var(--clr-overlay-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+.sidebarBrandText {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clr-on-dark-50);
+}
+.sidebarBrandSub {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--clr-gold-md);
+}
+
+.sidebarNav {
+  flex: 1;
+  padding: var(--gap-md) var(--gap-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xxs);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  color: var(--clr-on-dark-65);
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.navItem:hover {
+  background: var(--clr-overlay-hover-md);
+  color: var(--clr-on-dark);
+}
+.navItemActive {
+  background: var(--clr-overlay-active);
+  color: var(--clr-on-dark);
+  font-weight: 500;
+}
+.navIcon {
+  font-size: 0.875rem;
+  color: var(--clr-gold-md);
+}
+
+.sidebarFooter {
+  padding: var(--gap-md) var(--gap-sm) var(--gap-lg);
+  border-top: 1px solid var(--clr-overlay-border);
+}
+.sidebarFooter .btn-ghost {
+  color: var(--clr-on-dark-55);
+}
+.sidebarFooter .btn-ghost:hover {
+  background: var(--clr-overlay-hover-md);
+  color: var(--clr-on-dark);
+}
+
+/* ── Main content ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+  padding: var(--gap-xl);
+  min-width: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .page {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+  }
+  .main {
+    padding: var(--gap-lg);
+  }
+}

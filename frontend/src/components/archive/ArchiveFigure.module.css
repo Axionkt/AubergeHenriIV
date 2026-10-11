@@ -1,0 +1,30 @@
+.figure {
+  margin: var(--gap-lg) 0 var(--gap-lg);
+  max-width: 480px;
+  background: var(--clr-white);
+  border: 1px solid var(--clr-linen);
+  padding: var(--gap-sm) var(--gap-sm) var(--gap-md);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.figure.wide {
+  max-width: 100%;
+}
+
+.figure img {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius-sm);
+  filter: sepia(0.25) saturate(0.85) contrast(1.02);
+}
+
+.caption {
+  margin-top: var(--gap-sm);
+  padding-top: var(--gap-sm);
+  border-top: 1px solid var(--clr-linen);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--clr-warm);
+}

@@ -1,0 +1,123 @@
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 640px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.heroOverlay {
+  composes: overlay from "./Shared.module.css";
+}
+
+.heroBg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at 30% 60%,
+      var(--clr-grad-lavender-35) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 75% 30%,
+      var(--clr-grad-gold-20) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      160deg,
+      var(--clr-dark-light) 0%,
+      var(--clr-dark-mid) 40%,
+      var(--clr-dark-deep) 100%
+    );
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 720px;
+  padding: 0 var(--gap-lg);
+  animation: fadeUp 1s ease both;
+}
+
+.heroEyebrow {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--clr-gold-md);
+  margin-bottom: var(--gap-lg);
+}
+
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 300;
+  line-height: 1.05;
+  color: var(--clr-on-dark);
+  margin-bottom: var(--gap-lg);
+}
+.heroTitle em {
+  font-style: italic;
+  color: var(--clr-gold-md);
+}
+
+.heroSub {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--clr-on-dark-72);
+  line-height: 1.65;
+  margin-bottom: var(--gap-xl);
+}
+
+.heroCta {
+  display: flex;
+  gap: var(--gap-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.heroScroll {
+  position: absolute;
+  bottom: var(--gap-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-sm);
+  color: var(--clr-on-dark-40);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.scrollLine {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--clr-on-dark-40), transparent);
+  animation: scrollPulse 2s ease infinite;
+}
+@keyframes scrollPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.1);
+  }
+}
+
+@media (max-width: 600px) {
+  .heroCta {
+    flex-direction: column;
+    align-items: center;
+  }
+}

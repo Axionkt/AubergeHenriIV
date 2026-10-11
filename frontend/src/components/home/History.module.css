@@ -1,0 +1,7 @@
+.history {
+  padding: var(--gap-xl) var(--gap-lg);
+}
+.historyInner {
+  max-width: 1200px;
+  margin: 0 auto;
+}

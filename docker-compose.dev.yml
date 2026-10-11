@@ -1,0 +1,65 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    expose:
+      - "5173"
+    environment:
+      BACKEND_HOST: backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - storage:/var/www/storage
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=app_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=ah4_database
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - STORAGE_ROOT=/var/www/storage
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/nginx.conf:ro
+      - storage:/var/www/storage
+    depends_on:
+      - frontend
+      - backend
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ah4_database
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      - pg_dev_data:/var/lib/postgresql/data
+
+volumes:
+  pg_dev_data:
+  storage:

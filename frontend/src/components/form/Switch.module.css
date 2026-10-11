@@ -1,0 +1,150 @@
+.root {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.row {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--gap-sm);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.row.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.hiddenInput {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ── Track + thumb ── */
+
+.track {
+  flex-shrink: 0;
+  width: 38px;
+  height: 22px;
+  border: 1.5px solid var(--clr-linen);
+  border-radius: var(--radius-pill);
+  background: var(--clr-parchment);
+  position: relative;
+  top: 1px;
+  transition:
+    border-color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
+}
+
+.thumb {
+  position: absolute;
+  top: var(--gap-xxs);
+  left: var(--gap-xxs);
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--clr-white);
+  box-shadow: var(--shadow-md);
+  transition:
+    transform var(--transition),
+    background var(--transition);
+}
+
+.row:hover .track:not(.trackDisabled) {
+  border-color: var(--clr-sand);
+}
+
+.hiddenInput:focus-visible ~ .track {
+  border-color: var(--clr-lavender);
+  box-shadow: 0 0 0 3px var(--clr-focus-lavender);
+}
+
+.hiddenInput:checked ~ .track {
+  background: var(--clr-lavender);
+  border-color: var(--clr-lavender);
+}
+
+.hiddenInput:checked ~ .track .thumb {
+  transform: translateX(16px);
+}
+
+.row:hover .hiddenInput:checked ~ .track:not(.trackDisabled) {
+  background: var(--clr-lavender-md);
+  border-color: var(--clr-lavender-md);
+}
+
+/* disabled */
+.trackDisabled {
+  background: var(--clr-parchment);
+  border-color: var(--clr-linen);
+}
+
+.hiddenInput:checked ~ .trackDisabled {
+  background: var(--clr-linen);
+  border-color: var(--clr-linen);
+}
+
+.hiddenInput:checked ~ .trackDisabled .thumb {
+  background: var(--clr-white);
+}
+
+/* error */
+.trackError {
+  border-color: var(--clr-danger-border);
+}
+
+.row:hover .trackError:not(.trackDisabled) {
+  border-color: var(--clr-danger);
+  background: var(--clr-danger-lt);
+}
+
+.hiddenInput:focus-visible ~ .trackError {
+  border-color: var(--clr-danger);
+  box-shadow: 0 0 0 3px #9b23351a;
+}
+
+.hiddenInput:checked ~ .trackError {
+  background: var(--clr-danger);
+  border-color: var(--clr-danger);
+}
+
+/* ── Label text ── */
+
+.labelText {
+  font-size: 0.9375rem;
+  color: var(--clr-ink);
+  line-height: 1.45;
+  padding-top: var(--gap-xxs);
+}
+
+.labelText.labelError {
+  color: var(--clr-danger);
+}
+
+.required {
+  color: var(--clr-danger);
+  font-size: 0.8rem;
+  margin-left: var(--gap-xxs);
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--clr-warm);
+  line-height: 1.4;
+}
+
+.errorMsg {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  font-size: 0.8rem;
+  color: var(--clr-danger);
+  line-height: 1.4;
+}

@@ -1,0 +1,259 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  position: relative;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-earth);
+  cursor: default;
+}
+
+.required {
+  color: var(--clr-danger);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+/* ── Trigger ── */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--gap-sm) var(--gap-md);
+  border: 1px solid var(--clr-linen);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  background: var(--clr-white);
+  color: var(--clr-ink);
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+  box-sizing: border-box;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: var(--clr-sand);
+}
+
+.trigger:disabled {
+  background: var(--clr-parchment);
+  color: var(--clr-sand);
+  border-color: var(--clr-linen);
+  cursor: not-allowed;
+}
+
+.trigger.error {
+  border-color: var(--clr-danger-border);
+  background: var(--clr-danger-lt);
+}
+
+.trigger.open {
+  border-color: var(--clr-lavender);
+  box-shadow: 0 0 0 3px var(--clr-focus-lavender);
+}
+
+.trigger.error.open {
+  border-color: var(--clr-danger);
+  box-shadow: 0 0 0 3px #9b23351a;
+}
+
+.placeholder {
+  color: var(--clr-sand);
+}
+
+/* ── Popover ── */
+
+.popover {
+  position: absolute;
+  top: calc(100% + var(--gap-xs));
+  left: 0;
+  z-index: 100;
+  background: var(--clr-white);
+  border: 1px solid var(--clr-linen);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--gap-md);
+  width: 288px;
+  box-sizing: border-box;
+}
+
+/* ── Calendar header ── */
+
+.calHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gap-md);
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--clr-linen);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--clr-warm);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    border-color var(--transition),
+    color var(--transition);
+}
+
+.navBtn:hover {
+  border-color: var(--clr-sand);
+  color: var(--clr-ink);
+}
+
+.monthLabel {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--clr-ink);
+  letter-spacing: 0.01em;
+}
+
+/* ── Day grid ── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--gap-xxs);
+}
+
+.dayLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--clr-sand);
+}
+
+.dayBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--clr-ink);
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background var(--transition),
+    color var(--transition);
+  font-variant-numeric: tabular-nums;
+}
+
+.dayBtn:hover:not(:disabled):not(.daySelected) {
+  background: var(--clr-lavender-pale);
+  color: var(--clr-lavender);
+}
+
+.dayBtn:disabled {
+  color: var(--clr-linen);
+  cursor: not-allowed;
+}
+
+.dayToday {
+  font-weight: 600;
+  color: var(--clr-lavender);
+}
+
+.daySelected {
+  background: var(--clr-lavender);
+  color: var(--clr-white);
+  font-weight: 500;
+}
+
+/* ── Footer ── */
+
+.calFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--gap-sm);
+  padding-top: var(--gap-sm);
+  border-top: 1px solid var(--clr-linen);
+}
+
+.todayBtn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--clr-lavender);
+  cursor: pointer;
+  padding: var(--gap-xs) 0;
+  transition: opacity var(--transition);
+}
+
+.todayBtn:hover:not(:disabled) {
+  opacity: 0.75;
+}
+
+.todayBtn:disabled {
+  color: var(--clr-sand);
+  cursor: not-allowed;
+}
+
+.clearBtn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--clr-warm);
+  cursor: pointer;
+  padding: var(--gap-xs) 0;
+  transition: color var(--transition);
+}
+
+.clearBtn:hover {
+  color: var(--clr-ink);
+}
+
+/* ── Footer messages ── */
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--clr-warm);
+  line-height: 1.4;
+}
+
+.errorMsg {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  font-size: 0.8rem;
+  color: var(--clr-danger);
+  line-height: 1.4;
+}
