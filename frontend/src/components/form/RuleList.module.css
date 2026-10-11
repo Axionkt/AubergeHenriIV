@@ -1,0 +1,29 @@
+.ruleList {
+  list-style: none;
+  margin-top: var(--gap-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.rule {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  font-size: 0.8125rem;
+  transition: color var(--transition);
+}
+
+.ruleIcon {
+  font-size: 0.75rem;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ruleOk {
+  color: var(--clr-success);
+}
+.ruleFail {
+  color: var(--clr-warm);
+}

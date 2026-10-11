@@ -1,0 +1,291 @@
+.page {
+  padding-top: var(--nav-h);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-lg) 0;
+  background: var(--clr-stone);
+}
+
+.visual {
+  background:
+    radial-gradient(
+      ellipse at 40% 60%,
+      var(--clr-grad-lavender-50) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 70% 20%,
+      var(--clr-grad-gold-30) 0%,
+      transparent 45%
+    ),
+    linear-gradient(
+      160deg,
+      var(--clr-dark-mid) 0%,
+      var(--clr-dark-light) 50%,
+      #1a1020 100%
+    );
+  position: relative;
+  overflow: hidden;
+}
+.visual::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background-image: url("/patterns/fleur-de-lis.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.brandmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--gap-xl);
+  gap: var(--gap-xxs);
+}
+.brandResidence {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--clr-warm);
+}
+.brandName {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--clr-lavender);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--clr-white);
+  border: 1px solid var(--clr-linen);
+  border-radius: var(--radius-xl);
+  padding: var(--gap-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--clr-ink);
+  margin-bottom: var(--gap-sm);
+}
+.sub {
+  font-size: 0.9rem;
+  color: var(--clr-warm);
+  margin-bottom: var(--gap-lg);
+}
+
+.googleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) var(--gap-md);
+  border: 1px solid var(--clr-linen);
+  border-radius: var(--radius-md);
+  background: var(--clr-stone);
+  font-size: 0.875rem;
+  color: var(--clr-earth);
+  cursor: not-allowed;
+  opacity: 0.7;
+  position: relative;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-sm);
+}
+
+.footer {
+  margin-top: var(--gap-lg);
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--clr-warm);
+}
+.footer a {
+  color: var(--clr-lavender);
+  font-weight: 500;
+}
+.footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+  .visual {
+    display: none;
+  }
+  .panel {
+    padding: var(--gap-xl) var(--gap-lg);
+  }
+}
+
+.googleBtn {
+  cursor: pointer;
+  opacity: 1;
+}
+.googleBtn:not(:disabled):hover {
+  background: var(--clr-parchment);
+  border-color: var(--clr-sand);
+  opacity: 1;
+}
+.googleBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.googleSpinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--clr-linen);
+  border-top-color: var(--clr-lavender);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Email verification ── */
+.verifyTitle {
+  text-align: center;
+}
+.verifySub {
+  font-size: 0.9rem;
+  color: var(--clr-warm);
+  margin-bottom: var(--gap-lg);
+  text-align: center;
+}
+
+.verifyIcon {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: var(--gap-md);
+  color: var(--clr-lavender);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+}
+.verifyIconSuccess {
+  color: var(--clr-success);
+}
+.verifyIconError {
+  color: var(--clr-danger);
+}
+
+.verifySpinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--clr-linen);
+  border-top-color: var(--clr-lavender);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.verifyEmail {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--clr-lavender);
+  text-align: center;
+  margin: var(--gap-lg) 0;
+}
+
+.verifyHint {
+  font-size: 0.875rem;
+  color: var(--clr-warm);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: var(--gap-lg);
+}
+
+.dividerThin {
+  height: 1px;
+  background: var(--clr-linen);
+  margin: var(--gap-md) 0;
+}
+
+.resendText {
+  font-size: 0.875rem;
+  color: var(--clr-warm);
+  text-align: center;
+  margin-bottom: var(--gap-sm);
+}
+
+.resendBtn {
+  width: 100%;
+  justify-content: center;
+}
+
+.backBtn {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--gap-sm);
+}
+
+/* ── Unverified account notice on login ── */
+.unverifiedBox {
+  background: var(--clr-gold-lt);
+  border: 1px solid var(--clr-gold);
+  border-radius: var(--radius-md);
+  padding: var(--gap-sm) var(--gap-md);
+  font-size: 0.875rem;
+  color: var(--clr-gold-deep);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+.unverifiedLink {
+  font-weight: 500;
+  color: var(--clr-gold-deep);
+  text-decoration: underline;
+}
+.unverifiedLink:hover {
+  opacity: 0.8;
+}
+
+/* ── Password reset ── */
+.forgotLink {
+  font-size: 0.75rem;
+  color: var(--color-muted, #8c7e66);
+  text-decoration: none;
+}
+.forgotLink:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,110 @@
+.hoverZone {
+  display: none;
+}
+@media (min-width: 1115px) {
+  .hoverZone {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--gap-xxl);
+    z-index: 19;
+  }
+}
+
+.floatNav {
+  display: none;
+}
+@media (min-width: 1115px) {
+  .floatNav {
+    display: block;
+    position: fixed;
+    top: 50%;
+    left: var(--gap-lg);
+    transform: translateY(-50%);
+    width: 130px;
+    overflow: hidden;
+    transition: opacity 0.5s ease;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black 22%,
+      black 78%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black 22%,
+      black 78%,
+      transparent 100%
+    );
+    z-index: 20;
+  }
+}
+
+.scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0 var(--gap-sm);
+  cursor: pointer;
+  transition:
+    opacity 0.15s linear,
+    transform 0.15s linear;
+  transform-origin: left center;
+}
+.item:focus-visible {
+  outline: 2px solid var(--clr-lavender);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--clr-sand);
+  flex-shrink: 0;
+}
+.item[aria-current="true"] .dot {
+  background: var(--clr-lavender);
+  width: 8px;
+  height: 8px;
+}
+
+.year {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--clr-warm);
+  white-space: nowrap;
+}
+.item[aria-current="true"] .year {
+  color: var(--clr-ink);
+  font-weight: 600;
+}
+
+.era {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--clr-gold-deep);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

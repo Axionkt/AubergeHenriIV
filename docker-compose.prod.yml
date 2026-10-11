@@ -1,0 +1,67 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - storage:/var/www/storage
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=app_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=ah4_database
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - STORAGE_ROOT=/var/www/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - storage:/var/www/storage:ro
+    depends_on:
+      - frontend
+      - backend
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ah4_database
+    volumes:
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - pg_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d ah4_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_prod_data:
+  storage:

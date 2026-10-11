@@ -1,0 +1,9 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("/patterns/fleur-de-lis.png");
+  background-repeat: repeat;
+  background-size: 90px;
+  opacity: 0.08;
+  z-index: 1;
+}

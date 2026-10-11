@@ -1,0 +1,52 @@
+.footer {
+  background: var(--clr-ink);
+  padding: var(--gap-xl) var(--gap-lg);
+}
+.footerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-lg);
+  text-align: center;
+}
+.footerBrand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+.footerLogo {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--clr-gold-md);
+}
+.footerTagline {
+  font-size: 0.8125rem;
+  color: var(--clr-on-dark-35);
+  font-style: italic;
+  margin: 0;
+}
+.footerLinks {
+  display: flex;
+  gap: var(--gap-lg);
+}
+.footerLinks a {
+  font-size: 0.8125rem;
+  color: var(--clr-on-dark-45);
+  transition: color var(--transition);
+}
+.footerLinks a:hover {
+  color: var(--clr-on-dark-80);
+}
+.footerContact {
+  font-size: 0.8125rem;
+  color: var(--clr-on-dark-45);
+  user-select: all;
+}
+.footerCopy {
+  font-size: 0.75rem;
+  color: var(--clr-on-dark-25);
+  margin: 0;
+}

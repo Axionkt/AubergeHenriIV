@@ -1,0 +1,40 @@
+.ctaSection {
+  padding: var(--gap-xxl) var(--gap-lg);
+  background: linear-gradient(
+    135deg,
+    var(--clr-dark-mid) 0%,
+    var(--clr-dark-light) 60%,
+    var(--clr-dark-mid) 100%
+  );
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.ctaSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    var(--clr-grad-gold-15) 0%,
+    transparent 70%
+  );
+}
+.overlay {
+  composes: overlay from "./Shared.module.css";
+}
+.ctaContent {
+  position: relative;
+  z-index: 1;
+}
+.ctaTitle {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 300;
+  color: var(--clr-on-dark);
+  line-height: 1.15;
+}
+.ctaTitle em {
+  color: var(--clr-gold-md);
+  font-style: italic;
+}

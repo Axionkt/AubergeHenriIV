@@ -1,0 +1,137 @@
+.viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--card-radius);
+}
+
+.track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.slot {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 calc(var(--gap-lg) / 2);
+}
+
+/* Used for the static/no-cycle 2-card and jump-fade cases (parent is 100% wide). */
+.pairJump {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  gap: var(--gap-lg);
+}
+
+.pairSlot {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.cardInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--gap-lg);
+  overflow: hidden;
+}
+
+@keyframes slideFromRight {
+  from {
+    transform: translateX(48px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-48px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.fromRight {
+  animation: slideFromRight 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fromLeft {
+  animation: slideFromLeft 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.empty {
+  text-align: center;
+  color: var(--clr-sand);
+  padding: var(--gap-xl) 0;
+}
+
+/* unchanged below */
+.body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.quoteGlyph {
+  font-size: 72px;
+  line-height: 1;
+  color: var(--clr-accent);
+  opacity: 0.18;
+  position: absolute;
+  top: calc(-1 * var(--gap-md));
+  left: calc(-1 * var(--gap-sm));
+  pointer-events: none;
+  user-select: none;
+  font-style: normal;
+}
+.text {
+  font-family: "Lora", Georgia, serif;
+  font-size: 0.975rem;
+  line-height: 1.7;
+  color: var(--clr-text);
+  margin: 0;
+  padding-left: var(--gap-sm);
+  padding-bottom: var(--gap-xl);
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.text::-webkit-scrollbar {
+  display: none;
+}
+.fadeBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--gap-lg);
+  background: linear-gradient(to bottom, transparent, var(--clr-white));
+  pointer-events: none;
+}
+.quoteAuthor {
+  padding-bottom: var(--gap-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-md);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-warm);
+}
+.quoteDate {
+  color: var(--clr-sand);
+}

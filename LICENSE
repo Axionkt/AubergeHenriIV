@@ -1,0 +1,38 @@
+Copyright (c) 2026 Kelian Yvon
+
+SOURCE CODE LICENSE (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of the source code in this repository (the "Software"), to deal in the
+Software without restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+EXCLUSIONS (NOT LICENSED)
+
+The MIT permission above applies to the source code's logic and structure
+only. It does not grant any right to the following, which remain reserved:
+
+1. Names and branding: the name "Auberge Henri IV", and any logos, trade
+   names, slogans or other branding associated with it.
+2. Content: all text (including the historical archive texts), images,
+   photographs and other media.
+3. Visual design: the site's look and feel, including its stylesheets
+   (\*.css), layout, colour scheme and typography as used to present the
+   Auberge Henri IV website.
+
+You may not use any of the above to publish a website or service that
+replicates, imitates or is confusingly similar to the Auberge Henri IV
+website, or that suggests an affiliation with that business.

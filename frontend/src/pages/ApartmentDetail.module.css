@@ -1,0 +1,95 @@
+.page {
+  padding-top: var(--nav-h);
+  min-height: 100vh;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: var(--gap-lg);
+  align-items: start;
+  margin-bottom: var(--gap-xxl);
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.descCard {
+  padding: var(--gap-lg);
+}
+.descCard h4 {
+  margin-bottom: var(--gap-md);
+}
+.desc {
+  margin: 0;
+}
+
+.detailsCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  padding: var(--gap-lg);
+}
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-md);
+}
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+.dLabel {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-warm);
+}
+.dVal {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--clr-ink);
+}
+.dVal.end {
+  text-align: end;
+}
+
+.accessCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  padding: var(--gap-md) var(--gap-lg);
+}
+.accessDetail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.errorState {
+  text-align: center;
+  padding: var(--gap-xxl) var(--gap-lg);
+}
+.errorState h2 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: var(--gap-md);
+}
+.errorState p {
+  color: var(--clr-warm);
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,31 @@
+.page {
+  font-family: var(--font-body);
+  background: var(--clr-stone);
+  color: var(--clr-ink);
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+.intro {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--gap-lg) var(--gap-lg) 0 var(--gap-lg);
+}
+@media (min-width: 1115px) {
+  .intro {
+    padding-left: 190px;
+  }
+}
+.introImage {
+  figure {
+    margin: 0 auto var(--gap-md) auto;
+  }
+}
+
+.footer {
+  text-align: center;
+  padding: 0 var(--gap-lg) var(--gap-xxl);
+  color: var(--clr-warm);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}

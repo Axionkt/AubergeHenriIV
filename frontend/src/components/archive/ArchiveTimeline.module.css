@@ -1,0 +1,82 @@
+/* ── Mobile / narrow-viewport table of contents ── */
+.mobileToc {
+  display: none;
+}
+@media (max-width: 1114px) {
+  .mobileToc {
+    display: flex;
+    gap: var(--gap-sm);
+    overflow-x: auto;
+    padding: var(--gap-md) var(--gap-lg);
+    max-width: 980px;
+    margin: 0 auto;
+    scrollbar-width: thin;
+  }
+}
+
+.mobileTocLink {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) var(--gap-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-linen);
+  background: var(--clr-white);
+  transition:
+    border-color var(--transition),
+    background var(--transition);
+}
+.mobileTocLink:hover {
+  border-color: var(--clr-gold);
+  background: var(--clr-gold-lt);
+}
+.mobileTocLink:focus-visible {
+  outline: 2px solid var(--clr-lavender);
+  outline-offset: 2px;
+}
+.mobileTocLink b {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--clr-lavender);
+}
+.mobileTocLink span {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--clr-warm);
+}
+
+@media (min-width: 1115px) {
+  .shell {
+    padding-left: 190px;
+  }
+}
+
+/* ── Timeline / connecting spine ── */
+.timeline {
+  position: relative;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 var(--gap-lg) var(--gap-xxl) var(--gap-lg);
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: var(--gap-md);
+  bottom: var(--gap-md);
+  left: 188px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--clr-gold) 6%,
+    var(--clr-sand) 94%,
+    transparent
+  );
+}
+@media (max-width: 720px) {
+  .timeline::before {
+    display: none;
+  }
+}
