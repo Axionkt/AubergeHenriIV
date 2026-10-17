@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
 import styles from "./Auth.module.css";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 import Input from "../components/form/Input";
 import { RULES } from "../lib/password";
 import StrengthBar from "../components/form/StrengthBar";
@@ -58,7 +58,9 @@ export default function Register() {
         state: { email: form.email },
       });
     } catch (err: unknown) {
-      setError(getApiError(err, "L'inscription a échoué. Veuillez réessayer."));
+      setError(
+        getApiErrorMessage(err, "L'inscription a échoué. Veuillez réessayer."),
+      );
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,10 @@ export default function Register() {
         navigate("/", { replace: true });
       } catch (err: unknown) {
         setError(
-          getApiError(err, "Inscription Google échouée. Veuillez réessayer."),
+          getApiErrorMessage(
+            err,
+            "Inscription Google échouée. Veuillez réessayer.",
+          ),
         );
       } finally {
         setGLoading(false);

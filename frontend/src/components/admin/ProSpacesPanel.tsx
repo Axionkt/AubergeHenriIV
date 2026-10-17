@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/axios";
 import { keys } from "../../lib/query";
-import { getApiError } from "../../lib/apiError";
+import { getApiErrorMessage } from "../../lib/apiError";
 import ConfirmModal from "../ConfirmModal";
 import styles from "./Admin.module.css";
 import { ProSpaceItemAdmin, ProSpaceDetailsAdmin } from "../../types/proSpace";
@@ -204,7 +204,9 @@ export default function ProSpacesPanel() {
       setDeleteError(null);
     },
     onError: (err) =>
-      setDeleteError(getApiError(err, "Impossible de supprimer l'espace pro.")),
+      setDeleteError(
+        getApiErrorMessage(err, "Impossible de supprimer l'espace pro."),
+      ),
   });
 
   const availabilityMut = useMutation({
@@ -228,7 +230,10 @@ export default function ProSpacesPanel() {
     },
     onError: (err) =>
       setAvailabilityError(
-        getApiError(err, "Impossible de mettre à jour la disponibilité."),
+        getApiErrorMessage(
+          err,
+          "Impossible de mettre à jour la disponibilité.",
+        ),
       ),
   });
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/axios";
 import { keys } from "../../lib/query";
-import { getApiError } from "../../lib/apiError";
+import { getApiErrorMessage } from "../../lib/apiError";
 import styles from "./Admin.module.css";
 import ConfirmModal from "../ConfirmModal";
 import { Review } from "../../types/review";
@@ -91,7 +91,7 @@ export default function ReviewsPanel() {
     } catch (err) {
       setMsg({
         type: "error",
-        text: getApiError(err, "Une erreur est survenue."),
+        text: getApiErrorMessage(err, "Une erreur est survenue."),
       });
     } finally {
       setSaving(false);
@@ -105,7 +105,9 @@ export default function ReviewsPanel() {
       setDeleteError(null);
     },
     onError: (err) =>
-      setDeleteError(getApiError(err, "Impossible de supprimer l'avis.")),
+      setDeleteError(
+        getApiErrorMessage(err, "Impossible de supprimer l'avis."),
+      ),
   });
 
   return (

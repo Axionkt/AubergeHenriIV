@@ -1,13 +1,13 @@
 import { useRouteError, Link } from "react-router-dom";
 import styles from "./Auth.module.css";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 
 export default function VerifyEmailError() {
   const error = useRouteError();
   const msg =
     error instanceof Response
       ? "Lien invalide ou manquant."
-      : getApiError(error, "Le lien est invalide ou a expiré.");
+      : getApiErrorMessage(error, "Le lien est invalide ou a expiré.");
 
   return (
     <div className={styles.page}>

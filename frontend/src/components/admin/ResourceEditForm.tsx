@@ -50,6 +50,7 @@ export default function ResourceEditForm<
     newCount,
     saving,
     msg,
+    fieldErrors,
     handleSave,
   } = useResourceEditForm<TDetails, TForm>(resourceId, config, onClose);
 
@@ -162,6 +163,7 @@ export default function ResourceEditForm<
             value={form.name}
             onChange={setField("name")}
             placeholder={copy.namePlaceholder}
+            error={fieldErrors.name}
             required
           />
           <Textarea
@@ -169,6 +171,7 @@ export default function ResourceEditForm<
             value={form.description}
             onChange={setField("description")}
             placeholder={copy.descriptionPlaceholder}
+            error={fieldErrors.description}
             required
           />
         </div>
@@ -182,6 +185,7 @@ export default function ResourceEditForm<
             value={form.type}
             onChange={setField("type")}
             placeholder="T2, Studio…"
+            error={fieldErrors.type}
             required
           />
           <Input
@@ -189,6 +193,7 @@ export default function ResourceEditForm<
             value={form.floor}
             onChange={setField("floor")}
             placeholder="2e"
+            error={fieldErrors.floor}
             required
           />
           <Input
@@ -197,6 +202,7 @@ export default function ResourceEditForm<
             value={form.sizeCarrezSqm}
             onChange={setField("sizeCarrezSqm")}
             placeholder="65"
+            error={fieldErrors.sizeCarrezSqm}
             required
           />
           <Input
@@ -205,6 +211,7 @@ export default function ResourceEditForm<
             value={form.sizeFloorSqm}
             onChange={setField("sizeFloorSqm")}
             placeholder="68"
+            error={fieldErrors.sizeFloorSqm}
             required
           />
           <Input
@@ -212,6 +219,7 @@ export default function ResourceEditForm<
             value={form.orientation}
             onChange={setField("orientation")}
             placeholder="Sud, Est…"
+            error={fieldErrors.orientation}
             required
           />
           <Input
@@ -219,6 +227,7 @@ export default function ResourceEditForm<
             value={form.view}
             onChange={setField("view")}
             placeholder="Cour, rue…"
+            error={fieldErrors.view}
             required
           />
         </div>
@@ -237,6 +246,7 @@ export default function ResourceEditForm<
             value={form.electricHeatingModel}
             onChange={setField("electricHeatingModel")}
             placeholder="Modèle…"
+            error={fieldErrors.electricHeatingModel}
             required
           />
           <Input
@@ -244,6 +254,7 @@ export default function ResourceEditForm<
             value={form.bathroomTowelHeaterModel}
             onChange={setField("bathroomTowelHeaterModel")}
             placeholder="Modèle…"
+            error={fieldErrors.bathroomTowelHeaterModel}
             required
           />
           <Input
@@ -251,6 +262,7 @@ export default function ResourceEditForm<
             value={form.electricWaterHeaterModel}
             onChange={setField("electricWaterHeaterModel")}
             placeholder="Modèle…"
+            error={fieldErrors.electricWaterHeaterModel}
             required
           />
         </div>
@@ -267,6 +279,7 @@ export default function ResourceEditForm<
                 value={form[field.key] as string}
                 onChange={setField(field.key)}
                 placeholder={field.placeholder ?? "Modèle…"}
+                error={fieldErrors[field.key as string]}
                 required
               />
             ))}
@@ -282,6 +295,7 @@ export default function ResourceEditForm<
             value={form.dpeEnergyRating}
             onChange={setField("dpeEnergyRating")}
             placeholder="A, B, C…"
+            error={fieldErrors.dpeEnergyRating}
             required
           />
           <Input
@@ -290,6 +304,7 @@ export default function ResourceEditForm<
             value={form.dpeEnergyKwhPerSqmYear}
             onChange={setField("dpeEnergyKwhPerSqmYear")}
             placeholder="120"
+            error={fieldErrors.dpeEnergyKwhPerSqmYear}
             required
           />
           <Input
@@ -297,6 +312,7 @@ export default function ResourceEditForm<
             value={form.dpeEmissionsRating}
             onChange={setField("dpeEmissionsRating")}
             placeholder="A, B, C…"
+            error={fieldErrors.dpeEmissionsRating}
             required
           />
           <Input
@@ -305,6 +321,7 @@ export default function ResourceEditForm<
             value={form.dpeEmissionsKgPerSqmYear}
             onChange={setField("dpeEmissionsKgPerSqmYear")}
             placeholder="25"
+            error={fieldErrors.dpeEmissionsKgPerSqmYear}
             required
           />
           <Input
@@ -313,6 +330,7 @@ export default function ResourceEditForm<
             value={form.previousTenantAnnualConsumptionEur}
             onChange={setField("previousTenantAnnualConsumptionEur")}
             placeholder="1200"
+            error={fieldErrors.previousTenantAnnualConsumptionEur}
             required
           />
           <Input
@@ -321,6 +339,7 @@ export default function ResourceEditForm<
             value={form.meterPowerKva}
             onChange={setField("meterPowerKva")}
             placeholder="6"
+            error={fieldErrors.meterPowerKva}
             required
           />
           <Input
@@ -328,6 +347,7 @@ export default function ResourceEditForm<
             value={form.deliveryPointId}
             onChange={setField("deliveryPointId")}
             placeholder="14 chiffres"
+            error={fieldErrors.deliveryPointId}
             required
           />
         </div>
@@ -367,6 +387,7 @@ export default function ResourceEditForm<
             value={form.landRegistryRefPre2025}
             onChange={setField("landRegistryRefPre2025")}
             placeholder="Référence cadastrale…"
+            error={fieldErrors.landRegistryRefPre2025}
             required
           />
           <Input
@@ -374,6 +395,7 @@ export default function ResourceEditForm<
             value={form.landRegistryRefPost2025}
             onChange={setField("landRegistryRefPost2025")}
             placeholder="Référence cadastrale…"
+            error={fieldErrors.landRegistryRefPost2025}
             required
           />
         </div>

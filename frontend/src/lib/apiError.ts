@@ -1,10 +1,10 @@
-export function getApiError(
+export function getApiErrorMessage(
   err: unknown,
   fallback = "Une erreur est survenue.",
 ): string {
   return (
-    (err as { response?: { data?: { error?: string } } })?.response?.data
-      ?.error ?? fallback
+    (err as { response?: { data?: { message?: string } } })?.response?.data
+      ?.message ?? fallback
   );
 }
 

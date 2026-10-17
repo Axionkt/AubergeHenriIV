@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
 import styles from "./Auth.module.css";
-import { getApiError, getApiStatus } from "../lib/apiError";
+import { getApiErrorMessage, getApiStatus } from "../lib/apiError";
 import Input from "../components/form/Input";
 
 interface LocationState {
@@ -46,7 +46,10 @@ export default function Login() {
         setUnverified(true);
       } else {
         setError(
-          getApiError(err, "Identifiants incorrects. Veuillez réessayer."),
+          getApiErrorMessage(
+            err,
+            "Identifiants incorrects. Veuillez réessayer.",
+          ),
         );
       }
     } finally {
@@ -63,7 +66,10 @@ export default function Login() {
         redirect(user.isAdmin);
       } catch (err: unknown) {
         setError(
-          getApiError(err, "Connexion Google échouée. Veuillez réessayer."),
+          getApiErrorMessage(
+            err,
+            "Connexion Google échouée. Veuillez réessayer.",
+          ),
         );
       } finally {
         setGLoading(false);

@@ -11,6 +11,7 @@ export function errorHandler(
   const isAppError = err instanceof AppError;
   const status = isAppError ? err.statusCode : 500;
   const isServerError = status >= 500;
+  const errors = isAppError ? err.errors : undefined;
 
   if (isServerError) {
     console.error(`[${new Date().toISOString()}]:`, {
@@ -28,8 +29,9 @@ export function errorHandler(
   }
 
   res.status(status).json({
-    error: isServerError
+    message: isServerError
       ? "Une erreur est survenue. Veuillez réessayer plus tard."
       : err.message,
+    errors: errors,
   });
 }

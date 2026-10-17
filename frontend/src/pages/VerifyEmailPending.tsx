@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../lib/axios";
 import styles from "./Auth.module.css";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 
 // The register route passes the email via location state
 interface LocationState {
@@ -27,7 +27,7 @@ export default function VerifyEmailPending() {
       setSent(true);
     } catch (err: unknown) {
       setError(
-        getApiError(err, "Une erreur est survenue. Veuillez réessayer."),
+        getApiErrorMessage(err, "Une erreur est survenue. Veuillez réessayer."),
       );
     } finally {
       setResending(false);

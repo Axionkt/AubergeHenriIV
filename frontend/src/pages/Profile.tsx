@@ -8,7 +8,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import type { UserApartment, UserProSpace } from "../types/userAccess";
 import styles from "./Profile.module.css";
 import { formatDateTime } from "../lib/time";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 import Input from "../components/form/Input";
 
 export default function Profile() {
@@ -108,7 +108,10 @@ export default function Profile() {
     } catch (err: unknown) {
       setNameMsg({
         type: "error",
-        text: getApiError(err, "Une erreur est survenue. Veuillez réessayer."),
+        text: getApiErrorMessage(
+          err,
+          "Une erreur est survenue. Veuillez réessayer.",
+        ),
       });
     } finally {
       setNameSaving(false);
@@ -126,7 +129,7 @@ export default function Profile() {
       setDeleting(false);
       setConfirmDelete(false);
       setDeleteError(
-        getApiError(
+        getApiErrorMessage(
           err,
           "Une erreur est survenue lors de la suppression du compte.",
         ),

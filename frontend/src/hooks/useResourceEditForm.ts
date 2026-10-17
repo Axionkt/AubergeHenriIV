@@ -7,8 +7,9 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import axios from "axios";
 import api from "../lib/axios";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 import {
   AdminMediaItem,
   AdminMediaListItem,
@@ -20,6 +21,26 @@ import {
   ResourceDetailsBase,
   ResourceEditConfig,
 } from "../types/resourceEditForm";
+
+type FieldErrors = Record<string, string>;
+
+function extractFieldErrors(err: unknown): FieldErrors {
+  if (!axios.isAxiosError(err)) return {};
+  const errors = err.response?.data?.errors;
+  if (!Array.isArray(errors)) return {};
+
+  const result: FieldErrors = {};
+  for (const e of errors) {
+    if (
+      typeof e?.path === "string" &&
+      typeof e?.message === "string" &&
+      !(e.path in result) // keep the first error per field
+    ) {
+      result[e.path] = e.message;
+    }
+  }
+  return result;
+}
 
 export function useResourceEditForm<
   TDetails extends ResourceDetailsBase,
@@ -58,6 +79,7 @@ export function useResourceEditForm<
     type: "error" | "success";
     text: string;
   } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const thumbRef = useRef<HTMLInputElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
@@ -136,6 +158,14 @@ export function useResourceEditForm<
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
+  function clearFieldError(k: keyof TForm) {
+    setFieldErrors((prev) => {
+      if (!((k as string) in prev)) return prev;
+      const { [k as string]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }
+
   function setField(k: keyof TForm) {
     return (
       e: React.ChangeEvent<
@@ -143,6 +173,7 @@ export function useResourceEditForm<
       >,
     ) => {
       setForm((f) => ({ ...f, [k]: e.target.value }));
+      clearFieldError(k);
       if (!formDirty) setFormDirty(true);
     };
   }
@@ -150,6 +181,7 @@ export function useResourceEditForm<
   function setBool(k: keyof TForm) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       setForm((f) => ({ ...f, [k]: e.target.checked }));
+      clearFieldError(k);
       if (!formDirty) setFormDirty(true);
     };
   }
@@ -199,7 +231,10 @@ export function useResourceEditForm<
   }
 
   async function handleSave() {
+    setFieldErrors({});
+
     if (!form.name.trim()) {
+      setFieldErrors({ name: config.copy.requiredNameError });
       setMsg({ type: "error", text: config.copy.requiredNameError });
       return;
     }
@@ -284,7 +319,7 @@ export function useResourceEditForm<
             setMediaItems((prev) => prev.filter((m) => m.kind !== "new"));
             setMsg({
               type: "error",
-              text: getApiError(
+              text: getApiErrorMessage(
                 thumbErr,
                 config.copy.createSuccessThumbnailFailed,
               ),
@@ -308,9 +343,10 @@ export function useResourceEditForm<
       });
       setTimeout(onClose, 900);
     } catch (err) {
+      setFieldErrors(extractFieldErrors(err));
       setMsg({
         type: "error",
-        text: getApiError(err, config.copy.genericError),
+        text: getApiErrorMessage(err, config.copy.genericError),
       });
     } finally {
       setSaving(false);
@@ -346,6 +382,7 @@ export function useResourceEditForm<
     newCount,
     saving,
     msg,
+    fieldErrors,
     handleSave,
   };
 }

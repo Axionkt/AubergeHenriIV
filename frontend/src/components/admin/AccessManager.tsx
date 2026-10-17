@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keys } from "../../lib/query";
 import api from "../../lib/axios";
-import { getApiError } from "../../lib/apiError";
+import { getApiErrorMessage } from "../../lib/apiError";
 import styles from "./Admin.module.css";
 import ConfirmModal from "../ConfirmModal";
 import { User } from "../../types/user";
@@ -232,7 +232,7 @@ export default function AccessManager({
     } catch (err) {
       setMsg({
         type: "error",
-        text: getApiError(err, "Une erreur est survenue."),
+        text: getApiErrorMessage(err, "Une erreur est survenue."),
       });
     } finally {
       setSaving(false);
@@ -254,7 +254,7 @@ export default function AccessManager({
     } catch (err) {
       setMsg({
         type: "error",
-        text: getApiError(err, "Impossible de révoquer l'accès."),
+        text: getApiErrorMessage(err, "Impossible de révoquer l'accès."),
       });
     } finally {
       setRevokeTarget(null);

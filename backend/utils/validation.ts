@@ -12,10 +12,7 @@ import {
  */
 export function assertValid<T>(result: ValidationOutcome<T>): T {
   if (!result.success) {
-    // TODO: once BadRequestError supports field-level detail, pass
-    // result.errors through here, e.g.:
-    //   throw new BadRequestError(VALIDATION_ERROR_MESSAGE, result.errors);
-    throw new BadRequestError(VALIDATION_ERROR_MESSAGE);
+    throw new BadRequestError(VALIDATION_ERROR_MESSAGE, result.errors);
   }
   return result.data;
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import styles from "./Auth.module.css";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 import api from "../lib/axios";
 import Input from "../components/form/Input";
 import StrengthBar from "../components/form/StrengthBar";
@@ -42,7 +42,7 @@ export default function ResetPassword() {
       await api.post("/auth/reset-password", { token, password });
       setDone(true);
     } catch (err: unknown) {
-      setError(getApiError(err, "Lien invalide ou expiré."));
+      setError(getApiErrorMessage(err, "Lien invalide ou expiré."));
     } finally {
       setLoading(false);
     }

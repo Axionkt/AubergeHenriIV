@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import api from "../../lib/axios";
 import { keys } from "../../lib/query";
-import { getApiError } from "../../lib/apiError";
+import { getApiErrorMessage } from "../../lib/apiError";
 import styles from "./Admin.module.css";
 import AdminMediaChip from "./AdminMediaChip";
 import {
@@ -176,7 +176,7 @@ export default function CommonSpacesPanel() {
     } catch (err) {
       setMsg({
         type: "error",
-        text: getApiError(err, "Une erreur est survenue."),
+        text: getApiErrorMessage(err, "Une erreur est survenue."),
       });
     } finally {
       setSaving(false);

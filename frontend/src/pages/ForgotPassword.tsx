@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./Auth.module.css";
-import { getApiError } from "../lib/apiError";
+import { getApiErrorMessage } from "../lib/apiError";
 import Input from "../components/form/Input";
 
 export default function ForgotPassword() {
@@ -24,7 +24,7 @@ export default function ForgotPassword() {
       setSubmitted(true);
     } catch (err: unknown) {
       setError(
-        getApiError(err, "Une erreur est survenue. Veuillez réessayer."),
+        getApiErrorMessage(err, "Une erreur est survenue. Veuillez réessayer."),
       );
     } finally {
       setLoading(false);
