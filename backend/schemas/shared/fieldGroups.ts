@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { decimalField, dpeRatingSchema, idField, textField } from "./fields";
+import {
+  decimalField,
+  dpeRatingSchema,
+  idWithSpaceField,
+  textField,
+} from "./fields";
 
 // ---------------------------------------------------------------------------
 // Reusable field groups. Each schema spreads the groups it needs and
@@ -41,7 +46,7 @@ export const dpeFields = {
   previousTenantAnnualConsumptionEur: decimalField(0, 999_999.99, 2),
   hasDoubleGlazedWindows: z.boolean(),
   meterPowerKva: decimalField(0, 250, 2),
-  deliveryPointId: idField(100),
+  deliveryPointId: idWithSpaceField(100),
 };
 
 export const connectivityFields = {
@@ -51,6 +56,6 @@ export const connectivityFields = {
 };
 
 export const landRegistryFields = {
-  landRegistryRefPre2025: idField(100),
-  landRegistryRefPost2025: idField(100),
+  landRegistryRefPre2025: idWithSpaceField(100),
+  landRegistryRefPost2025: idWithSpaceField(100),
 };

@@ -74,18 +74,19 @@ export function decimalField(min: number, max: number, decimals = 2) {
     });
 }
 
-/** Conservative alphanumeric identifier (letters, digits, dash, underscore). */
-const idPattern = /^[A-Za-z0-9_-]*$/;
-export function idField(maxLen: number, minLen = 1) {
+/** Conservative identifier (letters, digits, single spaces). */
+const idWithSpacePattern = /^[A-Za-z0-9 ]*$/;
+export function idWithSpaceField(maxLen: number, minLen = 1) {
   return z
     .string()
     .transform(sanitizePlainText)
+    .transform((value) => value.replace(/[ _-]+/g, " "))
     .pipe(
       z
         .string()
         .min(minLen, minLen > 0 ? "Ce champ est requis" : "")
         .max(maxLen, `Doit contenir au plus ${maxLen} caractères`)
-        .regex(idPattern, "Contient des caractères invalides"),
+        .regex(idWithSpacePattern, "Contient des caractères invalides"),
     );
 }
 
