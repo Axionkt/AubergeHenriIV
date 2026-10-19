@@ -1,0 +1,122 @@
+name: Sync Upstream & Deploy to Production
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # Checks every 15 minutes
+  workflow_dispatch:        # Allows manual 1-click deploy from GitHub UI
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  UPSTREAM_REPO: kelian200/AubergeHenriIV
+
+jobs:
+  check-and-sync:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.sync.outputs.has_changes }}
+      commit_sha: ${{ steps.sync.outputs.commit_sha }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream and check for changes
+        id: sync
+        run: |
+          git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git || true
+          git fetch upstream main
+
+          LOCAL_SHA=$(git rev-parse HEAD)
+          UPSTREAM_SHA=$(git rev-parse upstream/main)
+
+          echo "Local SHA: $LOCAL_SHA"
+          echo "Upstream SHA: $UPSTREAM_SHA"
+
+          if [ "$LOCAL_SHA" != "$UPSTREAM_SHA" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "commit_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+
+            # Fast-forward fork main to match upstream
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git merge --ff-only upstream/main || git reset --hard upstream/main
+            git push origin main --force
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No new commits. Skipping build and deploy."
+          fi
+
+  build-and-push:
+    needs: check-and-sync
+    if: needs.check-and-sync.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout synced code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set lowercase image names
+        run: |
+          OWNER_LC="${OWNER,,}"
+          echo "IMAGE_FRONTEND=ghcr.io/${OWNER_LC}/auberge-henri4-frontend" >> $GITHUB_ENV
+          echo "IMAGE_BACKEND=ghcr.io/${OWNER_LC}/auberge-henri4-backend" >> $GITHUB_ENV
+        env:
+          OWNER: '${{ github.repository_owner }}'
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_BACKEND }}:latest
+            ${{ env.IMAGE_BACKEND }}:${{ needs.check-and-sync.outputs.commit_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.IMAGE_FRONTEND }}:latest
+            ${{ env.IMAGE_FRONTEND }}:${{ needs.check-and-sync.outputs.commit_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [check-and-sync, build-and-push]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Dedibox via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: "${{ needs.check-and-sync.outputs.commit_sha }}"
