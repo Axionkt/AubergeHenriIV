@@ -24,6 +24,17 @@ import {
 
 type FieldErrors = Record<string, string>;
 
+const PLAN_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
+const PLAN_ACCEPT = PLAN_MIME_TYPES.join(",");
+const PLAN_UPLOAD_FAILED = "Créé, mais le plan n'a pas pu être envoyé.";
+const PLAN_INVALID_TYPE =
+  "Le plan doit être une image (JPG, PNG, WEBP) ou un PDF.";
+
 function extractFieldErrors(err: unknown): FieldErrors {
   if (!axios.isAxiosError(err)) return {};
   const errors = err.response?.data?.errors;
@@ -42,6 +53,12 @@ function extractFieldErrors(err: unknown): FieldErrors {
   return result;
 }
 
+/**
+ * State and save logic for the admin create/edit form shared by apartments
+ * and pro spaces (`config` supplies the URLs, query keys, labels and form
+ * mapping). Loads the resource when editing, tracks pending media changes
+ * locally, and only sends them to the API on save.
+ */
 export function useResourceEditForm<
   TDetails extends ResourceDetailsBase,
   TForm extends BaseResourceForm,
@@ -70,6 +87,9 @@ export function useResourceEditForm<
   const [newThumb, setNewThumb] = useState<File | null>(null);
   const [thumbPreviewSrc, setThumbPreviewSrc] = useState<string | null>(null);
   const [deleteThumbnail, setDeleteThumbnail] = useState(false);
+  const [newPlan, setNewPlan] = useState<File | null>(null);
+  const [planPreviewSrc, setPlanPreviewSrc] = useState<string | null>(null);
+  const [deletePlan, setDeletePlan] = useState(false);
   const [markedMediaUids, setMarkedMediaUids] = useState<Set<string>>(
     new Set(),
   );
@@ -81,6 +101,7 @@ export function useResourceEditForm<
   } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const thumbRef = useRef<HTMLInputElement>(null);
+  const planRef = useRef<HTMLInputElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -99,6 +120,17 @@ export function useResourceEditForm<
     setThumbPreviewSrc(url);
     return () => URL.revokeObjectURL(url);
   }, [newThumb]);
+
+  // Only images get an object-URL preview; PDFs are shown as a file tile.
+  useEffect(() => {
+    if (!newPlan || !newPlan.type.startsWith("image/")) {
+      setPlanPreviewSrc(null);
+      return;
+    }
+    const url = URL.createObjectURL(newPlan);
+    setPlanPreviewSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [newPlan]);
 
   useEffect(() => {
     if (msg?.type !== "success") return;
@@ -210,12 +242,33 @@ export function useResourceEditForm<
     setDeleteThumbnail(false);
   }
 
+  function handlePlanPick(file: File) {
+    if (!PLAN_MIME_TYPES.includes(file.type)) {
+      setMsg({ type: "error", text: PLAN_INVALID_TYPE });
+      return;
+    }
+    setMsg(null);
+    setNewPlan(file);
+    setDeletePlan(false);
+  }
+
+  // A freshly picked file is discarded first (back to the saved plan, if any);
+  // only a saved plan with nothing picked gets marked for deletion. This also
+  // avoids sending a DELETE when there is no saved plan.
+  function removePlan() {
+    if (newPlan) {
+      setNewPlan(null);
+    } else if (resource?.planUrl) {
+      setDeletePlan(true);
+    }
+  }
+
   function handleAddMediaFiles(files: File[]) {
     const newItems: NewAdminMediaItem[] = files.map((file) => ({
       kind: "new",
       uid: crypto.randomUUID(),
       id: crypto.randomUUID(),
-      type: file.type.startsWith("video/") ? "video" : "image",
+      type: file.type.startsWith("video/") ? "VIDEO" : "IMAGE",
       url: URL.createObjectURL(file),
       file,
     }));
@@ -230,6 +283,20 @@ export function useResourceEditForm<
     });
   }
 
+  async function uploadPlan(id: string, file: File) {
+    const fd = new FormData();
+    fd.append("plan", file);
+    await api.post(config.api.mediaPlanUrl(id), fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  }
+
+  /**
+   * Edit: saves fields, then applies media changes in order (thumbnail,
+   * plan, deletions, uploads, reorder). Create: creates the resource first,
+   * then uploads its attachments; if one fails the form closes with a
+   * message rather than letting a second save create a duplicate.
+   */
   async function handleSave() {
     setFieldErrors({});
 
@@ -257,6 +324,14 @@ export function useResourceEditForm<
 
         if (newThumb) {
           await uploadThumbnail(resourceId, newThumb);
+        }
+
+        if (deletePlan && !newPlan) {
+          await api.delete(config.api.mediaPlanUrl(resourceId));
+        }
+
+        if (newPlan) {
+          await uploadPlan(resourceId, newPlan);
         }
 
         const existingMarkedIds = mediaItems
@@ -309,24 +384,40 @@ export function useResourceEditForm<
         const res = await api.post<string>(config.api.createUrl, payload);
         const newResourceId = res.data;
 
+        // The resource now exists; if an attachment fails to upload, report it
+        // and close instead of leaving the user on a form that would create a
+        // duplicate on the next save.
+        const failures: string[] = [];
+
         if (newThumb) {
           try {
             await uploadThumbnail(newResourceId, newThumb);
           } catch (thumbErr) {
-            await qc.invalidateQueries({
-              queryKey: config.queryKeys.invalidateOnSave,
-            });
-            setMediaItems((prev) => prev.filter((m) => m.kind !== "new"));
-            setMsg({
-              type: "error",
-              text: getApiErrorMessage(
+            failures.push(
+              getApiErrorMessage(
                 thumbErr,
                 config.copy.createSuccessThumbnailFailed,
               ),
-            });
-            setTimeout(onClose, 1500);
-            return;
+            );
           }
+        }
+
+        if (newPlan) {
+          try {
+            await uploadPlan(newResourceId, newPlan);
+          } catch (planErr) {
+            failures.push(getApiErrorMessage(planErr, PLAN_UPLOAD_FAILED));
+          }
+        }
+
+        if (failures.length > 0) {
+          await qc.invalidateQueries({
+            queryKey: config.queryKeys.invalidateOnSave,
+          });
+          setMediaItems((prev) => prev.filter((m) => m.kind !== "new"));
+          setMsg({ type: "error", text: failures.join(" ") });
+          setTimeout(onClose, 1500);
+          return;
         }
       }
 
@@ -357,6 +448,33 @@ export function useResourceEditForm<
   const showThumbnailDelete = !deleteThumbnail && !!thumbnailSrc;
   const newCount = mediaItems.filter((m) => m.kind === "new").length;
 
+  // Plan view-model, so the component stays presentational.
+  const existingPlanUrl = resource?.planUrl ? `/api/${resource.planUrl}` : null;
+  const hasPlan = !!newPlan || (!!existingPlanUrl && !deletePlan);
+  const planIsPdf = newPlan
+    ? newPlan.type === "application/pdf"
+    : resource?.planType === "DOCUMENT";
+  const plan = {
+    inputRef: planRef,
+    accept: PLAN_ACCEPT,
+    hasPlan,
+    isNew: !!newPlan,
+    isPdf: planIsPdf,
+    fileName: newPlan?.name ?? null,
+    imageSrc:
+      hasPlan && !planIsPdf
+        ? newPlan
+          ? planPreviewSrc
+          : existingPlanUrl
+        : null,
+    // link to the saved file; only meaningful while it's the one on display
+    existingHref: !newPlan && !deletePlan ? existingPlanUrl : null,
+    markedForDeletion: deletePlan,
+    pick: handlePlanPick,
+    remove: removePlan,
+    undoRemove: () => setDeletePlan(false),
+  };
+
   return {
     resource,
     isLoadingResource,
@@ -379,6 +497,7 @@ export function useResourceEditForm<
     handleAddMediaFiles,
     thumbnailSrc,
     showThumbnailDelete,
+    plan,
     newCount,
     saving,
     msg,

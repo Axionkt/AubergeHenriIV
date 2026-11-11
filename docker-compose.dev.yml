@@ -1,5 +1,13 @@
+x-logging: &logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "5"
+
 services:
   frontend:
+    <<: *logging
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
@@ -12,9 +20,11 @@ services:
       BACKEND_HOST: backend
 
   backend:
+    <<: *logging
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
+    restart: unless-stopped
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -27,38 +37,49 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=app_user
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_NAME=ah4_database
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - RESEND_API_KEY=${RESEND_API_KEY}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      - RESEND_API_KEY=${RESEND_API_KEY:?RESEND_API_KEY is required}
       - STORAGE_ROOT=/var/www/storage
     depends_on:
-      - db
+      db:
+        condition: service_healthy # first boot otherwise races the DB
 
   nginx:
-    image: nginx:alpine
+    <<: *logging
+    image: nginx:1.28-alpine
+    restart: unless-stopped
     ports:
       - "80:80"
     volumes:
       - ./nginx/dev.conf:/etc/nginx/nginx.conf:ro
-      - storage:/var/www/storage
+      - storage:/var/www/storage:ro
     depends_on:
       - frontend
       - backend
 
   db:
+    <<: *logging
     image: postgres:17
+    restart: unless-stopped
     environment:
       POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: ah4_database
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      - ./backend/db/migrations/000_init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
       - pg_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d ah4_database"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pg_dev_data:

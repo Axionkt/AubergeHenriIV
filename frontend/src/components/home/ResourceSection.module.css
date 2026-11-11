@@ -266,9 +266,12 @@
     background var(--transition),
     color var(--transition);
 }
-.cardRight span {
+.cardRight span:not(.cardRightLabel) {
   display: inline-block;
   transition: transform var(--transition);
+}
+.cardRightLabel {
+  display: none; /* mobile only */
 }
 
 .cardRightArrow {
@@ -285,8 +288,8 @@
     opacity: 1;
     background: var(--clr-overlay-thumb);
   }
-  .cardRight:hover span,
-  .cardRight:focus-visible span {
+  .cardRight:hover span:not(.cardRightLabel),
+  .cardRight:focus-visible span:not(.cardRightLabel) {
     transform: translateX(4px);
   }
 }
@@ -328,16 +331,49 @@
   }
 }
 
+@media (max-width: 560px) {
+  .card {
+    position: relative;
+    flex-direction: column;
+  }
+
+  .cardRight {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: var(--gap-xl);
+    gap: var(--gap-sm);
+    border-left: 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    opacity: 0.85;
+  }
+  .cardRightArrow {
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+  }
+  .cardRightLabel {
+    display: inline;
+  }
+
+  .cardRight::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .cardRight:focus-visible {
+    outline: none;
+  }
+  .card:has(.cardRight:focus-visible) {
+    outline: var(--gap-xxs) solid var(--clr-gold-md);
+    outline-offset: var(--gap-xxs);
+  }
+}
+
 @media (max-width: 480px) {
   .badgeTextFull {
     display: none;
   }
   .badgeTextShort {
     display: inline;
-  }
-  .cardRight {
-    flex-basis: 120px;
-    width: 120px;
-    font-size: 0.68rem;
   }
 }

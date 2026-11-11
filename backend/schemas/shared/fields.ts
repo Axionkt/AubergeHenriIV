@@ -40,12 +40,44 @@ export function textField(minLen: number, maxLen: number) {
     );
 }
 
-/** Optional / can-be-empty version of textField. */
-export function optionalTextField(maxLen: number) {
+/**
+ * Like sanitizePlainText, but keeps line breaks so list/paragraph/spacing
+ * formatting survives. Still strips control characters and raw HTML tags.
+ * The value is Markdown-style plain text; it must be rendered through
+ * <FormattedText> (which builds React elements, never raw HTML).
+ */
+export function sanitizeRichText(value: string): string {
+  let out = value
+    .replace(/\r\n?/g, "\n") // normalise line endings (also keeps length counts consistent)
+    .replace(/\t/g, " ")
+    // control chars, but NOT \n (\u000A); \r and \t are already handled above
+    .replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, "");
+
+  // Repeat until stable so "<scr<b>ipt>" can't reassemble into a tag after
+  // the inner tag is removed.
+  let prev: string;
+  do {
+    prev = out;
+    out = out.replace(/<\/?[a-zA-Z!][^>]*>/g, "");
+  } while (out !== prev);
+
+  return out
+    .replace(/ +\n/g, "\n") // trailing spaces on a line
+    .replace(/\n{5,}/g, "\n\n\n\n") // cap runs of blank lines at 3
+    .trim();
+}
+
+/** A trimmed, sanitized, length-bounded multi-line string field. */
+export function richTextField(minLen: number, maxLen: number) {
   return z
     .string()
-    .transform(sanitizePlainText)
-    .pipe(z.string().max(maxLen, `Doit contenir au plus ${maxLen} caractères`));
+    .transform(sanitizeRichText)
+    .pipe(
+      z
+        .string()
+        .min(minLen, `Doit contenir au moins ${minLen} caractère(s)`)
+        .max(maxLen, `Doit contenir au plus ${maxLen} caractères`),
+    );
 }
 
 /** Bounded finite number (rejects NaN, Infinity, and out-of-range values). */
@@ -75,16 +107,15 @@ export function decimalField(min: number, max: number, decimals = 2) {
 }
 
 /** Conservative identifier (letters, digits, single spaces). */
-const idWithSpacePattern = /^[A-Za-z0-9 ]*$/;
+const idWithSpacePattern = /^[\p{L}\p{N} ._\/-]*$/u;
 export function idWithSpaceField(maxLen: number, minLen = 1) {
   return z
     .string()
     .transform(sanitizePlainText)
-    .transform((value) => value.replace(/[ _-]+/g, " "))
     .pipe(
       z
         .string()
-        .min(minLen, minLen > 0 ? "Ce champ est requis" : "")
+        .min(minLen, minLen > 0 ? "Ce champ est requis" : undefined)
         .max(maxLen, `Doit contenir au plus ${maxLen} caractères`)
         .regex(idWithSpacePattern, "Contient des caractères invalides"),
     );
@@ -161,10 +192,6 @@ export const VALIDATION_ERROR_MESSAGE =
 
 export const uuidParamSchema = z.uuid({ message: "Identifiant invalide." });
 
-export function validateUuidParam(id: unknown): ValidationOutcome<string> {
-  return toValidationOutcome(uuidParamSchema.safeParse(id));
-}
-
 /**
  * Digits only, no leading +/-, no decimals, no hex/exponential notation
  * (which JS's own Number() would otherwise happily accept). Capped at 15
@@ -178,10 +205,6 @@ export const idParamSchema = z
   .string()
   .regex(/^\d{1,15}$/, { message: "Identifiant invalide." })
   .refine((value) => Number(value) > 0, { message: "Identifiant invalide." });
-
-export function validateIdParam(id: unknown): ValidationOutcome<string> {
-  return toValidationOutcome(idParamSchema.safeParse(id));
-}
 
 /**
  * A non-empty, deduplicated array of UUID strings — use for body fields like

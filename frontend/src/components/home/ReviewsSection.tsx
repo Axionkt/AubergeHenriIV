@@ -21,8 +21,8 @@ export default function ReviewsSection() {
     >
       <div className={styles.reviewsInner}>
         <div className="text-center">
-          <p className="section-eyebrow light">Livre d'or</p>
-          <h2 className="light">Paroles de locataires</h2>
+          <p className="section-eyebrow">Livre d'or</p>
+          <h2>Paroles de locataires</h2>
         </div>
         {isLoading && <ReviewCarouselSkeleton />}
         {isError && (

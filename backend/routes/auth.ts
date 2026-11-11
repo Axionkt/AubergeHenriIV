@@ -1,9 +1,7 @@
 import Router from "express";
 import { asyncHandler } from "../utils/asyncHandler";
-import { generateAccessToken, generateRefreshToken } from "../utils/password";
-import { UnauthorizedError } from "../utils/errors/UnauthorizedError";
-import { authMiddleware } from "../middleware/authMiddleware";
-import UserManagement from "../services/UserManagement";
+import { authenticationMiddleware } from "../middleware/authenticationMiddleware";
+import AuthService from "../services/AuthService";
 import {
   browseLimiter,
   forgotPasswordLimiter,
@@ -14,12 +12,12 @@ import {
   resendVerificationLimiter,
   resetPasswordLimiter,
   verifyEmailLimiter,
-} from "../rateLimiting";
+} from "../middleware/rateLimiting";
 import { refreshTokenMiddleware } from "../middleware/refreshTokenMiddleware";
-import UserServices from "../services/UserServices";
+import UserService from "../services/UserService";
 import {
   validateRegisterRequest,
-  validateVerifyEmailQuery,
+  validateVerifyEmailBody,
   validateResendVerificationRequest,
   validateForgotPasswordRequest,
   validateResetPasswordRequest,
@@ -27,6 +25,9 @@ import {
   validateGoogleAuthRequest,
 } from "../schemas/auth";
 import { assertValid } from "../utils/validation";
+import { clearAuthCookies, setAuthCookies } from "../utils/authCookies";
+import { NotFoundError } from "../utils/errors/NotFoundError";
+import { UnauthorizedError } from "../utils/errors/UnauthorizedError";
 
 const router = Router();
 
@@ -36,19 +37,19 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = assertValid(validateRegisterRequest(req.body));
 
-    await UserManagement.register(result);
+    await AuthService.register(result);
 
     res.status(201).json({ message: "Email de vérification envoyé." });
   }),
 );
 
-router.get(
+router.post(
   "/verify-email",
   verifyEmailLimiter,
   asyncHandler(async (req, res) => {
-    const result = assertValid(validateVerifyEmailQuery(req.query));
+    const result = assertValid(validateVerifyEmailBody(req.body));
 
-    await UserManagement.verifyEmailRegistration(result.token);
+    await AuthService.verifyEmail(result.token);
 
     res.status(200).json({ message: "Adresse e-mail vérifiée avec succès." });
   }),
@@ -60,9 +61,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = assertValid(validateResendVerificationRequest(req.body));
 
-    await UserManagement.updateUserEmailVerificationStatus(result.email);
+    await AuthService.resendVerification(result.email);
 
-    res.status(200).json({ message: "Email de vérification renvoyé." });
+    res.status(200).json({
+      message:
+        "Si un compte non vérifié existe pour cet e-mail, un lien a été envoyé.",
+    });
   }),
 );
 
@@ -77,7 +81,7 @@ router.post(
 
     const result = assertValid(validateForgotPasswordRequest(req.body));
 
-    await UserManagement.requestPasswordReset(result.email);
+    await AuthService.requestPasswordReset(result.email);
     res.status(200).json({ message: "E-mail envoyé si le compte existe." });
   }),
 );
@@ -88,7 +92,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = assertValid(validateResetPasswordRequest(req.body));
 
-    await UserManagement.resetPassword(result.token, result.password);
+    await AuthService.resetPassword(result.token, result.password);
     res.status(200).json({ message: "Mot de passe réinitialisé." });
   }),
 );
@@ -99,51 +103,11 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = assertValid(validateGoogleAuthRequest(req.body));
 
-    const googleRes = await fetch(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      { headers: { Authorization: `Bearer ${result.googleToken}` } },
-    );
+    const profile = await AuthService.getGoogleProfile(result.googleToken);
+    const { user, tokenVersion } = await AuthService.registerGoogle(profile);
 
-    if (!googleRes.ok) throw new UnauthorizedError("Token Google invalide.");
-
-    const googleUser = (await googleRes.json()) as {
-      sub: string;
-      email: string;
-      given_name: string;
-      family_name: string;
-      email_verified: boolean;
-    };
-
-    if (!googleUser.email_verified) {
-      throw new UnauthorizedError(
-        "L'adresse e-mail du compte Google n'est pas vérifiée.",
-      );
-    }
-
-    const newUser = await UserManagement.registerGoogle({
-      email: googleUser.email,
-      firstName: googleUser.given_name,
-      lastName: googleUser.family_name,
-    });
-
-    const accessToken = generateAccessToken(newUser.id, newUser.isAdmin);
-    const refreshToken = generateRefreshToken(newUser.id);
-
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/api/auth/refresh",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-    res.status(201).json(newUser);
+    setAuthCookies(res, { id: user.id, isAdmin: user.isAdmin, tokenVersion });
+    res.status(201).json(user);
   }),
 );
 
@@ -153,28 +117,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = assertValid(validateLoginRequest(req.body));
 
-    const user = await UserManagement.verifyCredentials(
+    const { user, tokenVersion } = await AuthService.verifyCredentials(
       result.email,
       result.password,
     );
 
-    const accessToken = generateAccessToken(user.id, user.isAdmin);
-    const refreshToken = generateRefreshToken(user.id);
-
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/api/auth/refresh",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, { id: user.id, isAdmin: user.isAdmin, tokenVersion });
     res.status(200).json(user);
   }),
 );
@@ -185,75 +133,47 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = assertValid(validateGoogleAuthRequest(req.body));
 
-    const googleRes = await fetch(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      { headers: { Authorization: `Bearer ${result.googleToken}` } },
+    const profile = await AuthService.getGoogleProfile(result.googleToken);
+    const { user, tokenVersion } = await AuthService.verifyCredentialsGoogle(
+      profile.email,
     );
 
-    if (!googleRes.ok) throw new UnauthorizedError("Token Google invalide.");
-
-    const googleUser = (await googleRes.json()) as {
-      sub: string;
-      email: string;
-      given_name: string;
-      family_name: string;
-      email_verified: boolean;
-    };
-
-    if (!googleUser.email_verified) {
-      throw new UnauthorizedError(
-        "L'adresse e-mail du compte Google n'est pas vérifiée.",
-      );
-    }
-
-    const user = await UserManagement.verifyCredentialsGoogle(googleUser.email);
-
-    const accessToken = generateAccessToken(user.id, user.isAdmin);
-    const refreshToken = generateRefreshToken(user.id);
-
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/api/auth/refresh",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, { id: user.id, isAdmin: user.isAdmin, tokenVersion });
     res.status(200).json(user);
   }),
 );
 
 router.post(
   "/refresh",
+  // Decode first so the limiter can key on the user instead of the IP.
   refreshTokenMiddleware,
   refreshLimiter,
   asyncHandler(async (req, res) => {
-    const user = await UserManagement.initializeUserSession(
-      req.decodedRefreshToken!.sub,
-    );
+    const { sub, v } = req.decodedRefreshToken!;
 
-    const accessToken = generateAccessToken(user.id, user.is_admin);
-    const newRefreshToken = generateRefreshToken(user.id);
+    let session;
 
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/api/auth/refresh",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+    try {
+      session = await UserService.getSession(sub);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        clearAuthCookies(res);
+        throw new UnauthorizedError("Session invalide.");
+      }
+
+      throw error;
+    }
+
+    // Bumped by a password reset: every older refresh token is dead.
+    if (session.tokenVersion !== v) {
+      clearAuthCookies(res);
+      throw new UnauthorizedError("Session invalide.");
+    }
+
+    setAuthCookies(res, {
+      id: session.user.id,
+      isAdmin: session.user.isAdmin,
+      tokenVersion: session.tokenVersion,
     });
 
     res.sendStatus(200);
@@ -262,19 +182,18 @@ router.post(
 
 router.post(
   "/logout",
-  asyncHandler(async (req, res) => {
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+  asyncHandler(async (_req, res) => {
+    clearAuthCookies(res);
     res.sendStatus(204);
   }),
 );
 
 router.get(
   "/me",
-  authMiddleware,
+  authenticationMiddleware,
   browseLimiter,
   asyncHandler(async (req, res) => {
-    const user = await UserServices.getUserById(req.user!.sub);
+    const user = await UserService.getUserById(req.user!.sub);
 
     res.status(200).json(user);
   }),

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import styles from "./ReviewCarousel.module.css";
 import { Review } from "../types/review";
+import { FormattedText } from "./form/Textarea";
 
 const AUTOPLAY_MS = 10000;
 const SLIDE_MS = 420;
@@ -31,23 +32,22 @@ function ReviewCard({ review }: { review: Review }) {
   return (
     <div className={`card ${styles.cardInner}`}>
       <div className={styles.quoteAuthor}>
-        <span className="ornament-line" />
-        {review.authorName}
+        <span className={styles.authorName} title={review.authorName}>
+          {review.authorName}
+        </span>
         {review.createdAt && (
           <span className={styles.quoteDate}>
             {new Date(review.createdAt).toLocaleDateString("fr-FR", {
               year: "numeric",
-              month: "long",
             })}
           </span>
         )}
-        <span className="ornament-line" />
       </div>
       <div className={styles.body}>
         <span className={styles.quoteGlyph} aria-hidden="true">
           "
         </span>
-        <p className={styles.text}>{review.text}</p>
+        <FormattedText className={styles.text} value={review.text} />
         <div className={styles.fadeBottom} aria-hidden="true" />
       </div>
     </div>
@@ -198,7 +198,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
         )}
       </div>
 
-      <div className="controls light">
+      <div className="controls">
         <button
           className="control-btn"
           onClick={goPrev}

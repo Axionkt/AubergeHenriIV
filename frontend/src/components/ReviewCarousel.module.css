@@ -98,10 +98,9 @@
 }
 .text {
   font-family: "Lora", Georgia, serif;
+  color: var(--clr-text);
   font-size: 0.975rem;
   line-height: 1.7;
-  color: var(--clr-text);
-  margin: 0;
   padding-left: var(--gap-sm);
   padding-bottom: var(--gap-xl);
   height: 100%;
@@ -124,14 +123,24 @@
 .quoteAuthor {
   padding-bottom: var(--gap-md);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--gap-md);
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
   font-size: 0.8125rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--clr-warm);
 }
+.authorName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .quoteDate {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
   color: var(--clr-sand);
 }

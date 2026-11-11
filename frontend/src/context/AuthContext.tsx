@@ -8,6 +8,8 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "../lib/axios";
+import { refreshAccessToken } from "../lib/auth";
+import { getApiStatus } from "../lib/apiError";
 import { keys, queryClient } from "../lib/query";
 import { User } from "../types/user";
 
@@ -30,15 +32,31 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Restores the session on page load. The access token lives 15 minutes but
+ * the refresh token 7 days, so a 401 here usually just means the access
+ * token expired while the tab was closed: refresh once, then retry. The
+ * axios interceptor skips /auth/* routes, so this has to be done here.
+ * Throws when there is no valid session (anonymous visitor).
+ */
+async function restoreSession(): Promise<User> {
+  try {
+    return (await api.get<User>("/auth/me")).data;
+  } catch (err) {
+    if (getApiStatus(err) !== 401) throw err;
+    await refreshAccessToken();
+    return (await api.get<User>("/auth/me")).data;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get<User>("/auth/me")
-      .then((res) => setUser(res.data))
+    restoreSession()
+      .then(setUser)
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);

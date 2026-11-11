@@ -1,3 +1,8 @@
+/**
+ * Turns an access-expiry calendar date ("2026-03-14") into the instant the
+ * day ends in Paris, as a UTC ISO string: access lasts through the whole
+ * chosen day, and DST is handled by measuring Paris's offset at that instant.
+ */
 export function toParisNextDayMidnightUTC(dateStr: string): string {
   // 1. Parse input safely (no timezone assumptions)
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -17,6 +22,7 @@ export function toParisNextDayMidnightUTC(dateStr: string): string {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
+    hourCycle: "h23",
     minute: "2-digit",
     second: "2-digit",
   });

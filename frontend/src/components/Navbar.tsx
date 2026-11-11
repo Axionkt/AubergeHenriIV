@@ -86,11 +86,11 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <NavLink to="/connexion" className={`btn btn-ghost btn-sm`}>
-                Connexion
-              </NavLink>
-              <NavLink to="/inscription" className={`btn btn-primary btn-sm`}>
+              <NavLink to="/inscription" className={`btn btn-ghost btn-sm`}>
                 S'inscrire
+              </NavLink>
+              <NavLink to="/connexion" className={`btn btn-primary btn-sm`}>
+                Connexion
               </NavLink>
             </>
           )}

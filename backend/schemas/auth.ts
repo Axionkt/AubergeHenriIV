@@ -7,23 +7,40 @@ import {
 } from "./shared/fields";
 
 const emailField = z
-  .email({ message: "Adresse e-mail invalide." })
-  .max(254, "L'adresse e-mail est trop longue.");
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(
+    z
+      .email({ message: "Adresse e-mail invalide." })
+      .max(254, "L'adresse e-mail est trop longue."),
+  );
 
 /**
- * Rules for a NEW password (registration, reset). Capped at 72 since
- * bcrypt silently ignores anything past 72 bytes — without this cap, two
- * different very long passwords could hash identically, and there's no
- * value in accepting input that's partly discarded anyway. Adjust the
- * complexity refine below if you already enforce different rules
- * elsewhere (frontend, product requirements, etc).
+ * Rules for a NEW password (registration, reset). Capped at 72 bytes since
+ * bcrypt silently ignores anything past that, so two long passwords
+ * sharing a 72-byte prefix would otherwise hash identically.
  */
 const newPasswordField = z
   .string()
-  .min(8, "Le mot de passe doit contenir au moins 8 caractères.")
-  .max(72, "Le mot de passe ne doit pas dépasser 72 caractères.")
-  .refine((pw) => /[A-Za-z]/.test(pw) && /[0-9]/.test(pw), {
-    message: "Le mot de passe doit contenir au moins une lettre et un chiffre.",
+  .min(10, "Le mot de passe doit contenir au moins 10 caractères.")
+  .refine((pw) => Buffer.byteLength(pw, "utf8") <= 72, {
+    message: "Le mot de passe est trop long (72 octets maximum).",
+  })
+  .refine((pw) => /[A-Z]/.test(pw), {
+    message: "Le mot de passe doit contenir une majuscule.",
+  })
+  .refine((pw) => /[a-z]/.test(pw), {
+    message: "Le mot de passe doit contenir une minuscule.",
+  })
+  .refine((pw) => /[0-9]/.test(pw), {
+    message: "Le mot de passe doit contenir un chiffre.",
+  })
+  .refine((pw) => /[^A-Za-z0-9]/.test(pw), {
+    message: "Le mot de passe doit contenir un caractère spécial.",
+  })
+  .refine((pw) => !/\s/.test(pw), {
+    message: "Le mot de passe ne doit pas contenir d'espaces.",
   });
 
 /**
@@ -59,19 +76,19 @@ export function validateRegisterRequest(
 }
 
 // ---------------------------------------------------------------------------
-// GET /verify-email — token comes from req.query, not req.body.
+// POST /verify-email (the frontend page reads ?token= and POSTs it)
 // ---------------------------------------------------------------------------
 
-export const verifyEmailQuerySchema = z
+export const verifyEmailBodySchema = z
   .object({ token: tokenField(512) })
   .strict();
 
-export type VerifyEmailQuery = z.infer<typeof verifyEmailQuerySchema>;
+export type VerifyEmailBody = z.infer<typeof verifyEmailBodySchema>;
 
-export function validateVerifyEmailQuery(
-  query: unknown,
-): ValidationOutcome<VerifyEmailQuery> {
-  return toValidationOutcome(verifyEmailQuerySchema.safeParse(query));
+export function validateVerifyEmailBody(
+  body: unknown,
+): ValidationOutcome<VerifyEmailBody> {
+  return toValidationOutcome(verifyEmailBodySchema.safeParse(body));
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +116,7 @@ export function validateResendVerificationRequest(
 // filling every field will. Kept as optional+unrestricted since it's not a
 // real input to validate — just check its presence in the route handler,
 // BEFORE running this schema, so a bot never learns anything about
-// validation from the response (see the route example below).
+// validation from the response.
 // ---------------------------------------------------------------------------
 
 export const forgotPasswordRequestSchema = z
@@ -171,4 +188,35 @@ export function validateGoogleAuthRequest(
   body: unknown,
 ): ValidationOutcome<GoogleAuthRequest> {
   return toValidationOutcome(googleAuthRequestSchema.safeParse(body));
+}
+
+// ---------------------------------------------------------------------------
+// Google profile: names come from Google, so they go through the same
+// validation as typed names, with fallbacks when missing or invalid.
+// ---------------------------------------------------------------------------
+
+const nameField = textField(1, 100);
+
+function cleanName(value: string | undefined, fallback: string): string {
+  const result = nameField.safeParse((value ?? "").slice(0, 100));
+  return result.success ? result.data : fallback;
+}
+
+export interface GoogleProfile {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export function toGoogleProfile(g: {
+  email: string;
+  given_name?: string;
+  family_name?: string;
+}): GoogleProfile {
+  const emailName = cleanName(g.email.split("@")[0], "Utilisateur");
+  return {
+    email: g.email.trim().toLowerCase(),
+    firstName: cleanName(g.given_name, emailName),
+    lastName: cleanName(g.family_name, "-"),
+  };
 }

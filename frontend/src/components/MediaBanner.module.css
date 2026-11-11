@@ -4,15 +4,45 @@
 }
 
 .heroMedia {
+  position: relative;
   width: 100%;
   height: 75vh;
   min-height: 360px;
+  overflow: hidden;
+  background: var(--clr-dark-deep);
 }
-.heroEl {
+
+.track {
+  display: flex;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.track::-webkit-scrollbar {
+  display: none;
+}
+.track:focus-visible {
+  outline: var(--gap-xxs) solid var(--clr-gold);
+  outline-offset: calc(-1 * var(--gap-xxs));
+}
+
+.slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+.heroEl {
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .heroPlaceholder {
   width: 100%;
@@ -23,22 +53,35 @@
     var(--clr-dark-mid) 100%
   );
 }
+.videoPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 3rem;
+  color: var(--clr-on-thumb);
+  opacity: 0.6;
+}
 
+/* ── Thumbnail belt ── */
 .thumbStrip {
+  position: relative;
   display: flex;
   gap: var(--gap-xs);
   padding: var(--gap-sm);
   background: var(--clr-scrim-dark);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
 }
 .thumb {
   flex-shrink: 0;
   width: 100px;
-  height: 64px;
+  height: var(--gap-xxl);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 2px solid transparent;
+  border: var(--gap-xxs) solid transparent;
   background: var(--clr-overlay-thumb);
   display: flex;
   align-items: center;

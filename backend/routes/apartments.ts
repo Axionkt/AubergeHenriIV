@@ -1,64 +1,18 @@
-import Router from "express";
-import { asyncHandler } from "../utils/asyncHandler";
-import ApartmentServices from "../services/ApartmentServices";
-import {
-  authorizeApartment,
-  Permission,
-} from "../middleware/authorizationMiddleware";
-import {
-  authMiddleware,
-  optionalAuthMiddleware,
-} from "../middleware/authMiddleware";
-import { registerUuidParams } from "../middleware/paramValidation";
+import { ApartmentAccessService } from "../services/spaces/SpaceAccessService";
+import { ApartmentService } from "../services/spaces/SpaceService";
+import type { UserApartmentAccessDTO } from "../types/userAccess";
+import { createSpaceRouter } from "./spaces/createSpaceRouter";
 
-const router = Router();
-registerUuidParams(router, ["uuid"]);
-
-router.get(
-  "/",
-  optionalAuthMiddleware,
-  asyncHandler(async (req, res) => {
-    const userId = req.user?.sub ?? null;
-
-    const apartments = await ApartmentServices.getAllApartments(userId);
-    res.status(200).json(apartments);
+export default createSpaceRouter({
+  service: ApartmentService,
+  access: ApartmentAccessService,
+  deniedMessage: "Accès à cet appartement refusé.",
+  commonMediaContext: "apartment-common",
+  accessListPath: "/access-to-apartments",
+  toAccessDTO: (entry): UserApartmentAccessDTO => ({
+    apartmentId: entry.id,
+    apartmentName: entry.name,
+    apartmentThumbnailUrl: entry.thumbnailUrl,
+    accessExpiry: entry.accessExpiry,
   }),
-);
-
-router.get(
-  "/access-to-apartments",
-  authMiddleware,
-  asyncHandler(async (req, res) => {
-    const userId = req.user!.sub;
-
-    const apartments = await ApartmentServices.getApartmentsForUser(userId);
-    res.status(200).json(apartments);
-  }),
-);
-
-router.get(
-  "/:uuid",
-  authMiddleware,
-  authorizeApartment(Permission.READ),
-  asyncHandler(async (req, res) => {
-    const apartment = await ApartmentServices.getApartmentById(
-      req.params.uuid,
-      req.user!.sub,
-    );
-    res.status(200).json(apartment);
-  }),
-);
-
-router.get(
-  "/:uuid/media",
-  authMiddleware,
-  authorizeApartment(Permission.READ),
-  asyncHandler(async (req, res) => {
-    const aptMediaList = await ApartmentServices.getApartmentMediaById(
-      req.params.uuid,
-    );
-    res.status(200).json(aptMediaList);
-  }),
-);
-
-export default router;
+});

@@ -1,4 +1,4 @@
-import { AdminMediaItem, MediaItem } from "./media";
+import { AdminMediaItem, MediaItem, PlanType } from "./media";
 
 export interface ProSpaceBase {
   id: string;
@@ -14,26 +14,27 @@ export interface ProSpaceBase {
   sizeFloorSqm: number;
   floor: string;
   orientation: string;
-  view?: string;
+  view: string;
   hasPrivateExterior: boolean;
+  hasPrivateParking: boolean;
 
   // Heating & Hot Water
-  electricHeatingModel?: string;
-  bathroomTowelHeaterModel?: string;
-  electricWaterHeaterModel?: string;
+  electricHeatingModel: string;
+  bathroomTowelHeaterModel: string;
+  electricWaterHeaterModel: string;
 
   // Kitchen
-  kitchenCabinetsModel?: string;
+  kitchenCabinetsModel: string;
 
   // Energy Performance (DPE)
-  dpeEnergyRating?: string;
-  dpeEnergyKwhPerSqmYear?: number;
-  dpeEmissionsRating?: string;
-  dpeEmissionsKgPerSqmYear?: number;
-  previousTenantAnnualConsumptionEur?: number;
+  dpeEnergyRating: string | null;
+  dpeEnergyKwhPerSqmYear: number | null;
+  dpeEmissionsRating: string | null;
+  dpeEmissionsKgPerSqmYear: number | null;
+  previousTenantAnnualConsumptionEur: string | null;
   hasDoubleGlazedWindows: boolean;
-  meterPowerKva?: number;
-  deliveryPointId?: string;
+  meterPowerKva: number;
+  deliveryPointId: string;
 
   // Connectivity
   hasFiberOptic: boolean;
@@ -41,8 +42,8 @@ export interface ProSpaceBase {
   hasTvOutlet: boolean;
 
   // Land Registry
-  landRegistryRefPre2025?: string;
-  landRegistryRefPost2025?: string;
+  landRegistryRefPre2025: string;
+  landRegistryRefPost2025: string;
 }
 
 export interface ProSpaceBaseAdmin extends ProSpaceBase {
@@ -52,6 +53,8 @@ export interface ProSpaceBaseAdmin extends ProSpaceBase {
 
 export interface ProSpaceDisplay {
   thumbnailUrl: string | null;
+  planType: PlanType | null;
+  planUrl: string | null;
   photoCount: number;
   videoCount: number;
 }
@@ -63,7 +66,7 @@ export interface ProSpaceItem extends ProSpaceDisplay {
   sizeCarrezSqm: number;
   floor: string;
   orientation: string;
-  view?: string;
+  view: string;
   isAvailable: boolean;
   hasAccess: boolean;
   accessExpiry: string | null;

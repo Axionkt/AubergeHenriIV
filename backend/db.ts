@@ -1,11 +1,19 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+import { config } from "./config";
+import { logError } from "./utils/logger";
+
+types.setTypeParser(types.builtins.NUMERIC, (v) => parseFloat(v));
 
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: config.DB_HOST,
+  port: config.DB_PORT,
+  user: config.DB_USER,
+  password: config.DB_PASSWORD,
+  database: config.DB_NAME,
 });
+
+pool.on("error", (err) =>
+  logError(err, { forceServerError: true, operation: "db.poolError" }),
+);
 
 export default pool;

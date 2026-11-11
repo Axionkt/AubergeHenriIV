@@ -1363,7 +1363,7 @@ export default function Archive() {
           title="Vente a Mr Laurent YVON et Mme Christine YVON née DZIERZBICKI"
         >
           <p>
-            Vente du 23 rue Bernadotte par Mr Patrick LOUART en faveur de
+            Vente du 23 rue Bernadotte par Mr Patrick LOUART en faveur de Md
             Christine YVON née DZIERZBICKI et Mr Laurent YVON.
           </p>
         </ArchiveEntry>

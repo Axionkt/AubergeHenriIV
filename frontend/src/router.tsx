@@ -37,7 +37,8 @@ export const router = createBrowserRouter([
             throw new Response("Lien invalide ou manquant.", { status: 400 });
 
           return {
-            verification: api.get(`/auth/verify-email?token=${token}`),
+            // POST so the token stays out of API URLs and nginx access logs.
+            verification: api.post("/auth/verify-email", { token }),
           };
         },
       },

@@ -3,6 +3,7 @@ import {
   VALIDATION_ERROR_MESSAGE,
   type ValidationOutcome,
 } from "../schemas/shared/fields";
+import { ERROR_CODES } from "./errors/errorCodes";
 
 /**
  * Unwraps a ValidationOutcome, throwing BadRequestError on failure and
@@ -12,7 +13,11 @@ import {
  */
 export function assertValid<T>(result: ValidationOutcome<T>): T {
   if (!result.success) {
-    throw new BadRequestError(VALIDATION_ERROR_MESSAGE, result.errors);
+    throw new BadRequestError(
+      VALIDATION_ERROR_MESSAGE,
+      ERROR_CODES.VALIDATION_ERROR,
+      result.errors,
+    );
   }
   return result.data;
 }

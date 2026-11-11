@@ -1,16 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyRefreshToken } from "../utils/password";
+import { verifyRefreshToken } from "../utils/tokens";
 import { UnauthorizedError } from "../utils/errors/UnauthorizedError";
+import { BadRequestError } from "../utils/errors/BadRequestError";
 
-export async function refreshTokenMiddleware(
+export function refreshTokenMiddleware(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) {
   const token = req.cookies?.refreshToken;
 
   if (!token) {
-    return next(new UnauthorizedError("Token de rafraîchissement manquant."));
+    return next(new BadRequestError("Token de rafraîchissement manquant."));
   }
 
   try {

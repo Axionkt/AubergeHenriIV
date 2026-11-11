@@ -19,12 +19,16 @@ export function registerIdParams(router: Router, paramNames: string[]): void {
   }
 }
 
+/**
+ * Validates a route param with Zod before any handler runs, so an invalid
+ * :uuid is a 400 instead of a Postgres cast error.
+ */
 export function registerParam<T>(
   router: Router,
   paramName: string,
   schema: z.ZodType<T>,
 ): void {
-  router.param(paramName, (req, res, next, value) => {
+  router.param(paramName, (req, _res, next, value) => {
     const result = assertValid(toValidationOutcome(schema.safeParse(value)));
 
     req.params[paramName] = result as string;

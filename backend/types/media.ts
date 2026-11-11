@@ -1,13 +1,23 @@
 import { MediaContext } from "../schemas/media";
+import { MediaType } from "../models/Media";
+import type Media from "../models/Media";
 
-export type MediaType = "image" | "video";
+export type MediaRecord = Pick<
+  Media,
+  "file_path" | "mime_type" | "role" | "context" | "context_id"
+>;
 
-export interface MediaRow {
+export type ResourceSingleton = {
   id: string;
-  filePath: string;
-  mimeType: string;
+  type: MediaType;
+};
+
+export type MediaCount = {
   context: MediaContext;
-}
+  contextId: string;
+  numImages: number;
+  numVideos: number;
+};
 
 export interface SavedFile {
   id: string;

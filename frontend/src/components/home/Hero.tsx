@@ -1,11 +1,6 @@
-import { Link } from "react-router-dom";
 import styles from "./Hero.module.css";
 
-interface HeroProps {
-  isAuth: boolean;
-}
-
-export default function Hero({ isAuth }: HeroProps) {
+export default function Hero() {
   return (
     <section className={styles.hero}>
       <div className={styles.heroOverlay} />
@@ -23,25 +18,6 @@ export default function Hero({ isAuth }: HeroProps) {
           <br />
           où le cachet de l'ancien rencontre la douceur de vivre.
         </p>
-        <div className={styles.heroCta}>
-          <Link
-            to={isAuth ? "/?tab=appartements#collection" : "/inscription"}
-            className="btn btn-gold btn-lg"
-          >
-            Découvrir nos appartements
-          </Link>
-          <Link
-            to={isAuth ? "/?tab=espaces-pro#collection" : "/inscription"}
-            className="btn btn-gold btn-lg"
-          >
-            Découvrir nos espaces pro
-          </Link>
-          {!isAuth && (
-            <Link to="/connexion" className="btn btn-outline-light btn-lg">
-              Se connecter
-            </Link>
-          )}
-        </div>
       </div>
       <div className={styles.heroScroll}>
         <span>Défiler</span>

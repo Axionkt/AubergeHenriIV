@@ -8,7 +8,7 @@ import ConfirmModal from "../ConfirmModal";
 import { User } from "../../types/user";
 import { ApartmentItemAdmin } from "../../types/apartment";
 import { ProSpaceItemAdmin } from "../../types/proSpace";
-import { formatDateTime } from "../../lib/time";
+import { formatDateTime } from "../../lib/dataFormatting";
 import Input from "../form/Input";
 import DateInput from "../form/DateInput";
 

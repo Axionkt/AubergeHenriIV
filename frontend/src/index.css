@@ -186,9 +186,12 @@ h4 {
 }
 p {
   font-size: 0.9375rem;
-  color: var(--clr-earth);
+  color: var(--paragraph-color, var(--clr-earth));
   line-height: 1.75;
   margin-bottom: var(--gap-lg);
+}
+p.light {
+  --paragraph-color: var(--clr-on-dark-72);
 }
 span {
   font-family: var(--font-body);
@@ -288,6 +291,54 @@ span {
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ── Text link with arrow ── */
+.link-arrow {
+  --link-color: var(--clr-lavender);
+  --link-color-hover: var(--clr-lavender-md);
+  --link-accent: var(--clr-gold-deep);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--link-color);
+  transition: color var(--transition);
+}
+.link-arrow::after {
+  content: "→";
+  font-style: normal;
+  color: var(--link-accent);
+  transition: transform var(--transition);
+}
+.link-arrow:hover,
+.link-arrow:focus-visible {
+  color: var(--link-color-hover);
+}
+.link-arrow:hover::after,
+.link-arrow:focus-visible::after {
+  transform: translateX(4px);
+}
+.link-arrow:focus-visible {
+  outline: 2px solid var(--link-accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+.link-arrow.light {
+  --link-color: var(--clr-on-dark-80);
+  --link-color-hover: var(--clr-on-dark);
+  --link-accent: var(--clr-gold-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-arrow,
+  .link-arrow::after {
+    transition: none;
+  }
 }
 
 /* ── Cards ── */

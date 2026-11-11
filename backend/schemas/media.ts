@@ -15,19 +15,30 @@ import {
   fileField,
   MAX_MEDIA_AT_ONCE,
   validateFile,
+  PLAN_MIME_TYPES,
+  PLAN_TYPE_EXTENSIONS,
+  MAX_PLAN_SIZE_BYTES,
 } from "./shared/fileUpload";
 
+export const VALID_COMMON_SPACE_CONTEXTS = [
+  "apartment-common",
+  "pro-space-common",
+] as const;
 export const VALID_CONTEXTS = [
   "apartment",
   "pro-space",
-  "common-space",
+  ...VALID_COMMON_SPACE_CONTEXTS,
 ] as const;
 
+export type CommonSpaceMediaContext =
+  (typeof VALID_COMMON_SPACE_CONTEXTS)[number];
 export type MediaContext = (typeof VALID_CONTEXTS)[number];
 
 export const mediaContextParamSchema = z.enum(VALID_CONTEXTS, {
   message: `Le contexte doit être l'un des suivants : ${VALID_CONTEXTS.join(", ")}`,
 });
+
+export const singletonMediaRoleParamSchema = z.enum(["thumbnail", "plan"]);
 
 // ---------------------------------------------------------------------------
 // Body schemas for bulk media operations (reorder / delete), both operating
@@ -64,8 +75,7 @@ export function validateDeleteMediaRequest(
 
 // ---------------------------------------------------------------------------
 // Media upload — validates req.files after Multer has already parsed the
-// multipart request. Adjust maxCount / MAX_IMAGE_SIZE_BYTES to your actual
-// limits.
+// multipart request.
 // ---------------------------------------------------------------------------
 
 const uploadThumbnailFileSchema = fileField({
@@ -73,11 +83,21 @@ const uploadThumbnailFileSchema = fileField({
   extensionsByMimeType: THUMBNAIL_TYPE_EXTENSIONS,
   maxSizeBytes: MAX_THUMBNAIL_SIZE_BYTES,
 });
-
 export async function validateUploadThumbnailFile(
   file: unknown,
 ): Promise<ValidationOutcome<z.infer<typeof uploadThumbnailFileSchema>>> {
   return validateFile(uploadThumbnailFileSchema, file);
+}
+
+const uploadPlanFileSchema = fileField({
+  allowedMimeTypes: PLAN_MIME_TYPES,
+  extensionsByMimeType: PLAN_TYPE_EXTENSIONS,
+  maxSizeBytes: MAX_PLAN_SIZE_BYTES,
+});
+export async function validateUploadPlanFile(
+  file: unknown,
+): Promise<ValidationOutcome<z.infer<typeof uploadPlanFileSchema>>> {
+  return validateFile(uploadPlanFileSchema, file);
 }
 
 const uploadMediaFilesSchema = fileArrayField({
@@ -85,8 +105,8 @@ const uploadMediaFilesSchema = fileArrayField({
   extensionsByMimeType: MEDIA_TYPE_EXTENSIONS,
   maxSizeBytes: MAX_MEDIA_SIZE_BYTES,
   maxCount: MAX_MEDIA_AT_ONCE,
+  maxTotalSizeBytes: 500 * 1024 * 1024,
 });
-
 export async function validateUploadMediaFiles(
   files: unknown,
 ): Promise<ValidationOutcome<z.infer<typeof uploadMediaFilesSchema>>> {

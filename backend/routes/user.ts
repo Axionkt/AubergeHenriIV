@@ -1,14 +1,12 @@
 import Router from "express";
-import UserServices from "../services/UserServices";
+import UserService from "../services/UserService";
 import { asyncHandler } from "../utils/asyncHandler";
-import {
-  authorizeUser,
-  Permission,
-} from "../middleware/authorizationMiddleware";
-import { mutateAccountLimiter } from "../rateLimiting";
+import { authorizeSelfOrAdmin } from "../middleware/authorizationMiddleware";
+import { mutateAccountLimiter } from "../middleware/rateLimiting";
 import { registerUuidParams } from "../middleware/paramValidation";
 import { assertValid } from "../utils/validation";
 import { validateEditUserDetailsRequest } from "../schemas/user";
+import { audit } from "../utils/audit";
 
 const router = Router();
 registerUuidParams(router, ["uuid"]);
@@ -16,27 +14,28 @@ registerUuidParams(router, ["uuid"]);
 router
   .route("/:uuid")
   .get(
-    authorizeUser(Permission.READ),
+    authorizeSelfOrAdmin(),
     asyncHandler(async (req, res) => {
-      const user = await UserServices.getUserById(req.params.uuid);
+      const user = await UserService.getUserById(req.params.uuid);
       res.status(200).json(user);
     }),
   )
   .put(
     mutateAccountLimiter,
-    authorizeUser(Permission.WRITE),
+    authorizeSelfOrAdmin(),
     asyncHandler(async (req, res) => {
       const result = assertValid(validateEditUserDetailsRequest(req.body));
 
-      await UserServices.editUserDetails(req.params.uuid, result);
+      await UserService.editUserDetails(req.params.uuid, result);
       res.sendStatus(204);
     }),
   )
   .delete(
     mutateAccountLimiter,
-    authorizeUser(Permission.WRITE),
+    authorizeSelfOrAdmin(),
     asyncHandler(async (req, res) => {
-      await UserServices.deleteUser(req.params.uuid);
+      await UserService.deleteUser(req.params.uuid);
+      audit("user.delete", { targetType: "user", targetIds: [req.params.uuid] });
       res.sendStatus(204);
     }),
   );

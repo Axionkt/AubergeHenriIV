@@ -1,4 +1,5 @@
 import { QueryKey } from "@tanstack/react-query";
+import { PlanType } from "./media";
 
 export interface BaseResourceForm {
   // General
@@ -12,6 +13,7 @@ export interface BaseResourceForm {
   orientation: string;
   view: string;
   hasPrivateExterior: boolean;
+  hasPrivateParking: boolean;
   // Heating & Hot Water
   electricHeatingModel: string;
   bathroomTowelHeaterModel: string;
@@ -69,6 +71,7 @@ export interface ResourceEditApiConfig {
   createUrl: string;
   mediaListUrl: (id: string) => string;
   mediaThumbnailUrl: (id: string) => string;
+  mediaPlanUrl: (id: string) => string;
   mediaBulkUrl: (id: string) => string;
   mediaReorderUrl: (id: string) => string;
 }
@@ -82,6 +85,8 @@ export interface ResourceEditQueryKeys {
 export interface ResourceDetailsBase {
   name: string;
   thumbnailUrl?: string | null;
+  planType?: PlanType | null;
+  planUrl?: string | null;
 }
 
 export interface ResourceEditConfig<

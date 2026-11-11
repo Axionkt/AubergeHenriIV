@@ -75,13 +75,6 @@
   margin-bottom: var(--gap-xl);
 }
 
-.heroCta {
-  display: flex;
-  gap: var(--gap-md);
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
 .heroScroll {
   position: absolute;
   bottom: var(--gap-xl);

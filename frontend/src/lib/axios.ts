@@ -7,6 +7,8 @@ const api = axios.create({
   withCredentials: true, // sends both access and refresh token cookies
 });
 
+// On a 401, refresh the session once and replay the request. /auth/* routes
+// are excluded: their 401s are real answers (bad password, expired refresh).
 api.interceptors.response.use(
   (res) => res,
   async (err) => {

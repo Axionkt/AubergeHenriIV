@@ -14,7 +14,7 @@ export default function AdminMediaChip({
   marked: boolean;
   onToggle: () => void;
 }) {
-  const isVideo = item.type === "video";
+  const isVideo = item.type === "VIDEO";
 
   const {
     attributes,
