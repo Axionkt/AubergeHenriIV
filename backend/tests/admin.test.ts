@@ -1,10 +1,18 @@
 import request from "supertest";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../app";
-import pool from "../db";
 import { sendEmailBatch } from "../emails/mailer";
 import { audit } from "../utils/audit";
 import { authCookie, createUser, type TestUser } from "./helpers";
+import {
+  KIND_NAMES,
+  SPACE_KINDS,
+  accessRows,
+  createSpace,
+  grantAccess,
+  spaceCreateBody,
+  type SpaceKindName,
+} from "./spaceHelpers";
 
 // Keep the real audit logging, but record the calls.
 vi.mock("../utils/audit", async (importOriginal) => {
@@ -12,90 +20,57 @@ vi.mock("../utils/audit", async (importOriginal) => {
   return { ...actual, audit: vi.fn(actual.audit) };
 });
 
-const PRO_SPACE = {
-  name: "Bureau 12",
-  description: "Bureau lumineux au premier étage.",
-  type: "Bureau",
-  sizeCarrezSqm: 25.5,
-  sizeFloorSqm: 27,
-  floor: "1er",
-  orientation: "Est",
-  view: "Cour",
-  hasPrivateExterior: false,
-  hasPrivateParking: true,
-  electricHeatingModel: "Model H",
-  bathroomTowelHeaterModel: "Model T",
-  electricWaterHeaterModel: "Model W",
-  kitchenCabinetsModel: "Model K",
-  dpeEnergyRating: "C",
-  dpeEnergyKwhPerSqmYear: 150,
-  dpeEmissionsRating: "B",
-  dpeEmissionsKgPerSqmYear: 10,
-  previousTenantAnnualConsumptionEur: "900",
-  hasDoubleGlazedWindows: true,
-  meterPowerKva: 9,
-  deliveryPointId: "12345678901234",
-  hasFiberOptic: true,
-  hasCopperNetwork: false,
-  hasTvOutlet: false,
-  landRegistryRefPre2025: "AB 123",
-  landRegistryRefPost2025: "AB 456",
-};
-
 let admin: TestUser;
-let tenant: TestUser;
 
 beforeAll(async () => {
   admin = await createUser({ isAdmin: true });
-  tenant = await createUser();
 });
 
-describe("admin: pro space creation and access grant", () => {
-  let proSpaceId: string;
+describe.each(KIND_NAMES)("admin: %s lifecycle", (kind: SpaceKindName) => {
+  const { path, adminPath, idsField } = SPACE_KINDS[kind];
+  let tenant: TestUser;
+  let spaceId: string;
 
-  it("creates a pro space and audits it", async () => {
-    const res = await request(app)
-      .post("/admin/pro-spaces")
-      .set("Cookie", authCookie(admin))
-      .send(PRO_SPACE);
+  const asAdmin = (method: "post" | "put" | "delete", url: string) =>
+    request(app)[method](url).set("Cookie", authCookie(admin));
+  const tenantGet = () =>
+    request(app).get(`${path}/${spaceId}`).set("Cookie", authCookie(tenant));
+
+  beforeAll(async () => {
+    tenant = await createUser();
+  });
+
+  it("creates a unit and audits it", async () => {
+    const res = await asAdmin("post", adminPath).send(spaceCreateBody(kind));
 
     expect(res.status).toBe(201);
-    proSpaceId = res.body;
-    expect(proSpaceId).toMatch(/^[0-9a-f-]{36}$/);
+    spaceId = res.body;
+    expect(spaceId).toMatch(/^[0-9a-f-]{36}$/);
 
     expect(audit).toHaveBeenCalledWith("space.create", {
-      targetType: "pro-space",
-      targetIds: [proSpaceId],
+      targetType: kind,
+      targetIds: [spaceId],
     });
   });
 
   it("grants a user access, persists it, notifies and audits it", async () => {
-    const before = await request(app)
-      .get(`/pro-spaces/${proSpaceId}`)
-      .set("Cookie", authCookie(tenant));
-    expect(before.status).toBe(403);
+    expect((await tenantGet()).status).toBe(403);
 
-    const res = await request(app)
-      .post("/admin/pro-spaces/user-accesses")
-      .set("Cookie", authCookie(admin))
-      .send({
-        userIds: [tenant.id],
-        proSpaceIds: [proSpaceId],
-        accessExpiry: null,
-      });
+    const res = await asAdmin("post", `${adminPath}/user-accesses`).send({
+      userIds: [tenant.id],
+      [idsField]: [spaceId],
+      accessExpiry: null,
+    });
     expect(res.status).toBe(204);
 
-    const { rows } = await pool.query(
-      `SELECT access_expiry FROM UserProSpaceAccess
-       WHERE user_id = $1 AND pro_space_id = $2`,
-      [tenant.id, proSpaceId],
-    );
-    expect(rows).toEqual([{ access_expiry: null }]);
+    expect(await accessRows(kind, spaceId)).toEqual([
+      { user_id: tenant.id, access_expiry: null },
+    ]);
 
     // Audit records ids only: the admin is taken from the request context.
     expect(audit).toHaveBeenCalledWith("access.grant", {
-      targetType: "pro-space",
-      targetIds: [proSpaceId],
+      targetType: kind,
+      targetIds: [spaceId],
       userIds: [tenant.id],
       accessExpiry: null,
     });
@@ -104,25 +79,55 @@ describe("admin: pro space creation and access grant", () => {
       expect.objectContaining({ to: tenant.email }),
     ]);
 
-    const after = await request(app)
-      .get(`/pro-spaces/${proSpaceId}`)
-      .set("Cookie", authCookie(tenant));
-    expect(after.status).toBe(200);
+    expect((await tenantGet()).status).toBe(200);
   });
 
   it("does not let a non-admin grant access", async () => {
     vi.mocked(audit).mockClear();
+    const outsider = await createUser();
 
     const res = await request(app)
-      .post("/admin/pro-spaces/user-accesses")
-      .set("Cookie", authCookie(tenant))
+      .post(`${adminPath}/user-accesses`)
+      .set("Cookie", authCookie(outsider))
       .send({
-        userIds: [tenant.id],
-        proSpaceIds: [proSpaceId],
+        userIds: [outsider.id],
+        [idsField]: [spaceId],
         accessExpiry: null,
       });
 
     expect(res.status).toBe(403);
     expect(audit).not.toHaveBeenCalled();
+    expect(await accessRows(kind, spaceId)).toHaveLength(1);
+  });
+
+  it("revokes access immediately, and audits it", async () => {
+    const res = await asAdmin("delete", `${adminPath}/user-accesses`).send({
+      userIds: [tenant.id],
+      [idsField]: [spaceId],
+    });
+    expect(res.status).toBe(204);
+
+    expect(await accessRows(kind, spaceId)).toEqual([]);
+    expect(audit).toHaveBeenCalledWith("access.revoke", {
+      targetType: kind,
+      targetIds: [spaceId],
+      userIds: [tenant.id],
+    });
+    expect((await tenantGet()).status).toBe(403);
+  });
+
+  it("revokes every grant when the unit is made unavailable with revokeAccesses", async () => {
+    const otherSpace = await createSpace(kind, "Unit B");
+    await grantAccess(kind, tenant.id, spaceId);
+    await grantAccess(kind, tenant.id, otherSpace);
+
+    const res = await asAdmin("put", `${adminPath}/${spaceId}/availability`).send(
+      { isAvailable: false, revokeAccesses: true },
+    );
+    expect(res.status).toBe(204);
+
+    expect(await accessRows(kind, spaceId)).toEqual([]);
+    // Grants on other units are untouched.
+    expect(await accessRows(kind, otherSpace)).toHaveLength(1);
   });
 });

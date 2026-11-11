@@ -1,3 +1,7 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 /**
  * Environment for the app under test. config.ts validates process.env when
  * it is first imported, so this must run before any app module loads.
@@ -20,7 +24,10 @@ export function applyTestEnv(): void {
   env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters-long";
   env.GOOGLE_CLIENT_ID = "test-google-client-id";
   env.RESEND_API_KEY = "re_test_not_a_real_key";
-  env.STORAGE_ROOT = "/tmp/auberge-test-storage";
+  // Uploads land in a fresh temp folder, never in a real storage volume.
+  env.STORAGE_ROOT ??= fs.mkdtempSync(
+    path.join(os.tmpdir(), "auberge-test-storage-"),
+  );
 }
 
 /** The reset drops the whole schema, so only ever point it at a test database. */

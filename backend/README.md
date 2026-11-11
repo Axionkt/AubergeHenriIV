@@ -257,7 +257,7 @@ npm test
 docker stop auberge-test-pg
 ```
 
-The defaults (`localhost:5433`, `postgres`/`postgres`, `auberge_test`) can be overridden with the usual `DB_*` variables. Each run drops and rebuilds the schema, so the setup refuses any `DB_NAME` that doesn't contain `test`. Test files run one at a time and each starts from empty tables.
+The defaults (`localhost:5433`, `postgres`/`postgres`, `auberge_test`) can be overridden with the usual `DB_*` variables. Each run drops and rebuilds the schema, so the setup refuses any `DB_NAME` that doesn't contain `test`. Test files run one at a time and each starts from empty tables. Unit tests run once per kind (apartments and pro spaces): the logic is shared, but each kind has its own tables and media contexts, and a slip in that wiring would only break one of them.
 
 What they lock in:
 
@@ -265,12 +265,14 @@ What they lock in:
 | --- | --- |
 | Email tokens | Only the SHA-256 is stored; the stored value is not itself a working token; verification and reset links work once |
 | Sessions | A password reset bumps `token_version`, and refresh tokens issued before it get `401 Session invalide.` |
-| Login | Email is case-insensitive; unknown email and wrong password return the same 401 body; unverified accounts get 403 |
+| Login | Email is case-insensitive; unknown email and wrong password return the same 401 body; unverified accounts get 403; 5 failures from one IP get a 429, even with the right password next |
 | Anti-enumeration | `forgot-password` and `resend-verification` answer identically for unknown emails and send nothing |
 | Response shape | `/auth/me` and login return a plain `UserDTO`, never `token_version` |
-| Authorization | Admin routes need a validly signed admin token; units need a live grant on that exact unit (expired grants are refused before the nightly purge); `/user/:uuid` is self-only |
+| Authorization | Admin routes need a validly signed admin token; units need a live grant on that exact unit (expired grants are refused before the nightly purge); common areas need a grant on a unit of the same kind; `/user/:uuid` is self-only |
 | Media | Thumbnails are public; other media need a grant, and denied requests never get an `X-Accel-Redirect` |
 | Input | Malformed UUID params are a 400, before any SQL runs |
-| Admin | Creating a unit and granting access persist the grant and write `admin_audit` entries |
+| Uploads | The type is taken from the bytes: disguised files, a wrong declared type or a wrong extension are rejected with nothing stored and temp files removed; stored names are random |
+| Admin | Create, grant, revoke and "unavailable + revoke" take effect immediately and write `admin_audit` entries; non-admins can't grant |
+| Migrations | Re-running the runner on an up-to-date database is a no-op |
 
 CI (`.github/workflows/ci.yml`) runs the typecheck and these tests against a `postgres:17` service container on every push and pull request, and builds the frontend. The workflow token is read-only. `npm run build` uses `tsconfig.build.json`, so tests never end up in `build/`.

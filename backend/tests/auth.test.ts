@@ -137,6 +137,28 @@ describe("login", () => {
   });
 });
 
+describe("brute-force protection", () => {
+  it("blocks an IP after 5 failed logins, without affecting other IPs", async () => {
+    const user = await createUser();
+    // The app trusts one proxy hop (nginx), which sets X-Forwarded-For.
+    const attempt = (ip: string, password: string) =>
+      request(app)
+        .post("/auth/login")
+        .set("X-Forwarded-For", ip)
+        .send({ email: user.email, password });
+
+    for (let i = 0; i < 5; i++) {
+      expect((await attempt("203.0.113.7", "Wrong-Password-1")).status).toBe(
+        401,
+      );
+    }
+
+    // Even the right password is refused once the limit is hit.
+    expect((await attempt("203.0.113.7", PASSWORD)).status).toBe(429);
+    expect((await attempt("203.0.113.8", PASSWORD)).status).toBe(200);
+  });
+});
+
 describe("GET /auth/me", () => {
   it("returns a plain UserDTO, without token_version", async () => {
     const user = await createUser();
