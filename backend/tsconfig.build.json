@@ -1,0 +1,5 @@
+{
+  // Production build: tests and test tooling stay out of build/.
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "build", "tests", "vitest.config.mts"]
+}

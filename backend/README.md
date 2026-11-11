@@ -16,12 +16,14 @@ For the system-level view (architecture, threat model, deployment), see the [roo
 - [Rate limiting](#rate-limiting)
 - [API reference](#api-reference)
 - [Development](#development)
+- [Tests](#tests)
 
 ## Structure
 
 ```
 backend/
-├── server.ts          Middleware order, router mounting, /health, graceful shutdown
+├── app.ts             Express app: middleware order, router mounting, /health
+├── server.ts          Startup: migrations, listen, cron jobs, graceful shutdown
 ├── config.ts          Environment variables, validated with Zod before anything else runs
 ├── db.ts              PostgreSQL connection pool
 ├── db/                migrate.ts (runner), migrations/ (numbered SQL), seed.sql (fake dev data)
@@ -46,7 +48,7 @@ backend/
 
 ## Request lifecycle
 
-Middleware runs in this order (`server.ts`):
+Middleware runs in this order (`app.ts`):
 
 | # | Step | Why it is here |
 | --- | --- | --- |
@@ -240,6 +242,35 @@ The backend normally runs inside the dev compose stack (see the root README), wh
 | `npm run dev` | nodemon + ts-node (used by the dev container) |
 | `npm run build` | Compiles TypeScript to `build/` |
 | `npm start` | Runs the compiled server |
-| `npx tsc --noEmit` | Typecheck (`strict`, `noUnusedLocals`, `noUnusedParameters`) |
+| `npx tsc --noEmit` | Typecheck (`strict`, `noUnusedLocals`, `noUnusedParameters`), tests included |
+| `npm test` | Integration tests (see below) |
 
 `bash gen-secrets.sh` prints two random JWT secrets for `.env`.
+
+## Tests
+
+Integration tests (`tests/`, Vitest + supertest) drive the real Express app against a real PostgreSQL 17. The schema is built the way production gets it: the `000_init.sql` baseline, then the migration runner. Only the edges are faked: Resend (emails are recorded, and tests read tokens out of the link like a user would) and Google ID token verification.
+
+```bash
+docker run -d --rm --name auberge-test-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=auberge_test -p 5433:5432 postgres:17
+npm test
+docker stop auberge-test-pg
+```
+
+The defaults (`localhost:5433`, `postgres`/`postgres`, `auberge_test`) can be overridden with the usual `DB_*` variables. Each run drops and rebuilds the schema, so the setup refuses any `DB_NAME` that doesn't contain `test`. Test files run one at a time and each starts from empty tables.
+
+What they lock in:
+
+| Area | Property |
+| --- | --- |
+| Email tokens | Only the SHA-256 is stored; the stored value is not itself a working token; verification and reset links work once |
+| Sessions | A password reset bumps `token_version`, and refresh tokens issued before it get `401 Session invalide.` |
+| Login | Email is case-insensitive; unknown email and wrong password return the same 401 body; unverified accounts get 403 |
+| Anti-enumeration | `forgot-password` and `resend-verification` answer identically for unknown emails and send nothing |
+| Response shape | `/auth/me` and login return a plain `UserDTO`, never `token_version` |
+| Authorization | Admin routes need a validly signed admin token; units need a live grant on that exact unit (expired grants are refused before the nightly purge); `/user/:uuid` is self-only |
+| Media | Thumbnails are public; other media need a grant, and denied requests never get an `X-Accel-Redirect` |
+| Input | Malformed UUID params are a 400, before any SQL runs |
+| Admin | Creating a unit and granting access persist the grant and write `admin_audit` entries |
+
+CI (`.github/workflows/ci.yml`) runs the typecheck and these tests against a `postgres:17` service container on every push and pull request, and builds the frontend. The workflow token is read-only. `npm run build` uses `tsconfig.build.json`, so tests never end up in `build/`.
