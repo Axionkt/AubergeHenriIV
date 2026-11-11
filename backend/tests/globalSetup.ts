@@ -1,11 +1,10 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { applyTestEnv, assertTestDatabase } from "./env";
 
 /**
  * Runs once per `vitest run`, before any test file: rebuilds the schema
- * from scratch the same way production gets it, i.e. the 000_init.sql
- * baseline followed by the migration runner.
+ * from an empty database with the migration runner alone (000_init.sql
+ * included), the way a new deployment gets it. The upgrade path of an
+ * existing production database is covered in migrations.test.ts.
  */
 export default async function setup(): Promise<void> {
   applyTestEnv();
@@ -17,11 +16,6 @@ export default async function setup(): Promise<void> {
 
   try {
     await pool.query("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
-    const baseline = await fs.readFile(
-      path.resolve(__dirname, "../db/migrations/000_init.sql"),
-      "utf8",
-    );
-    await pool.query(baseline);
     await runMigrations();
   } finally {
     await pool.end();

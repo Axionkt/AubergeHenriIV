@@ -1,7 +1,6 @@
 -- DEFINE TYPES
-CREATE TYPE media_context AS ENUM ('apartment', 'pro-space', 'apartment-common', 'pro-space-common');
-CREATE TYPE media_type AS ENUM ('IMAGE', 'VIDEO', 'DOCUMENT');
-CREATE TYPE media_role AS ENUM ('REGULAR', 'THUMBNAIL', 'PLAN');
+CREATE TYPE media_context AS ENUM ('apartment', 'pro-space', 'common-space');
+CREATE TYPE media_type AS ENUM ('image', 'video');
 
 -- INIT TABLES
 CREATE TABLE IF NOT EXISTS Users (
@@ -36,7 +35,6 @@ CREATE TABLE IF NOT EXISTS Apartments (
     orientation VARCHAR(50) NOT NULL,
     view VARCHAR(100) NOT NULL,
     has_private_exterior BOOLEAN NOT NULL DEFAULT FALSE,
-    has_private_parking BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- Heating & Hot Water
     electric_heating_model VARCHAR(100) NOT NULL,
@@ -50,11 +48,11 @@ CREATE TABLE IF NOT EXISTS Apartments (
     kitchen_cabinets_model VARCHAR(100) NOT NULL,
 
     -- Energy Performance (DPE)
-    dpe_energy_rating VARCHAR(2),
-    dpe_energy_kwh_per_sqm_year NUMERIC(6,2),
-    dpe_emissions_rating VARCHAR(2),
-    dpe_emissions_kg_per_sqm_year NUMERIC(6,2),
-    previous_tenant_annual_consumption_eur VARCHAR(50),
+    dpe_energy_rating VARCHAR(2) NOT NULL,
+    dpe_energy_kwh_per_sqm_year NUMERIC(6,2) NOT NULL,
+    dpe_emissions_rating VARCHAR(2) NOT NULL,
+    dpe_emissions_kg_per_sqm_year NUMERIC(6,2) NOT NULL,
+    previous_tenant_annual_consumption_eur NUMERIC(8,2) NOT NULL,
     has_double_glazed_windows BOOLEAN NOT NULL DEFAULT FALSE,
     meter_power_kva NUMERIC(5,2) NOT NULL,
     delivery_point_id VARCHAR(100) NOT NULL,
@@ -88,7 +86,6 @@ CREATE TABLE IF NOT EXISTS ProSpaces (
     orientation VARCHAR(50) NOT NULL,
     view VARCHAR(100) NOT NULL,
     has_private_exterior BOOLEAN NOT NULL DEFAULT FALSE,
-    has_private_parking BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- Heating & Hot Water
     electric_heating_model VARCHAR(100) NOT NULL,
@@ -99,11 +96,11 @@ CREATE TABLE IF NOT EXISTS ProSpaces (
     kitchen_cabinets_model VARCHAR(100) NOT NULL,
 
     -- Energy Performance (DPE)
-    dpe_energy_rating VARCHAR(2),
-    dpe_energy_kwh_per_sqm_year NUMERIC(6,2),
-    dpe_emissions_rating VARCHAR(2),
-    dpe_emissions_kg_per_sqm_year NUMERIC(6,2),
-    previous_tenant_annual_consumption_eur VARCHAR(50),
+    dpe_energy_rating VARCHAR(2) NOT NULL,
+    dpe_energy_kwh_per_sqm_year NUMERIC(6,2) NOT NULL,
+    dpe_emissions_rating VARCHAR(2) NOT NULL,
+    dpe_emissions_kg_per_sqm_year NUMERIC(6,2) NOT NULL,
+    previous_tenant_annual_consumption_eur NUMERIC(8,2) NOT NULL,
     has_double_glazed_windows BOOLEAN NOT NULL DEFAULT FALSE,
     meter_power_kva NUMERIC(5,2) NOT NULL,
     delivery_point_id VARCHAR(100) NOT NULL,
@@ -126,12 +123,12 @@ CREATE TABLE IF NOT EXISTS Media (
     file_path TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size_bytes INT NOT NULL,
-    caption TEXT,
     context media_context NOT NULL,
     context_id UUID,
-    role media_role NOT NULL,
     type media_type NOT NULL,
+    is_thumbnail BOOLEAN NOT NULL DEFAULT FALSE,
     display_order INT NOT NULL DEFAULT 0,
+    caption TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -159,9 +156,7 @@ CREATE TABLE IF NOT EXISTS Reviews (
 
 -- DEFINE INDEXES
 CREATE INDEX media_context_idx ON Media (context, context_id);
-CREATE UNIQUE INDEX unique_media_role_per_context
-    ON Media (context, context_id, role) NULLS NOT DISTINCT
-    WHERE role IN ('THUMBNAIL', 'PLAN');
+CREATE UNIQUE INDEX media_thumbnail_idx ON Media (context, context_id) WHERE is_thumbnail = TRUE;
 
 -- DEFINE CRON JOBS
 CREATE OR REPLACE FUNCTION flush_expired_data()

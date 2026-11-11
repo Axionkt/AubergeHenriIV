@@ -115,7 +115,7 @@ The interface is in French; the code and documentation are in English.
    ```
 3. Open <http://localhost>.
 
-On first start, Postgres creates the schema from `backend/db/migrations/000_init.sql` and loads **fake sample data** from `backend/db/seed.sql`. The backend then applies any newer migrations. To start over: `docker compose -f docker-compose.dev.yml down -v`.
+On first start, Postgres creates the baseline schema from `backend/db/migrations/000_init.sql` and loads **fake sample data** from `backend/db/seed.sql`. The backend then applies the numbered migrations on top. To start over: `docker compose -f docker-compose.dev.yml down -v`.
 
 | Account | Password | Role |
 | --- | --- | --- |

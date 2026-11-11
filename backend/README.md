@@ -137,6 +137,23 @@ Integrity is enforced in the database too, not only in Zod: a unique index allow
 2. Applies every `db/migrations/*.sql` file not yet recorded in `schema_migrations`, in filename order, **each in its own transaction**. A failing file rolls back completely and aborts startup.
 3. A database created before the runner existed is detected, and its baseline (`000_init.sql`) is recorded as already applied.
 
+`000_init.sql` is frozen: it is exactly the schema production was first built from, and a test pins its checksum. Editing it would change new databases but never existing ones, so the two would silently drift apart. Every change since then is a numbered file:
+
+| File | Change |
+| --- | --- |
+| `001_media_roles.sql` | `role` (`REGULAR`, `THUMBNAIL`, `PLAN`) replaces `is_thumbnail`; uppercase media types plus `DOCUMENT`; the single `common-space` context becomes `apartment-common` and `pro-space-common` (existing rows go to `apartment-common`) |
+| `002_space_fields.sql` | `has_private_parking`; optional energy figures; free-text previous consumption |
+| `003_email.sql` | Lowercase emails, enforced by a `CHECK` |
+| `004_not_null.sql` | `NOT NULL` on flags and timestamps |
+| `005_indexes.sql` | Indexes for lookups by unit on the grant tables |
+| `006_hash_tokens.sql` | Hashes pending verification tokens, drops pending reset links, unique token indexes |
+| `007_token_version.sql` | `token_version`, bumped on password reset |
+| `008_media_check.sql` | Unit ID required except on common-area media |
+| `009_checks.sql` | Energy rating and size `CHECK`s |
+| `010_media_created_at.sql` | `NOT NULL` media timestamps |
+
+Enum changes rebuild the type instead of using `ALTER TYPE ... ADD VALUE`, whose new value can't be used in the transaction that adds it.
+
 To change the schema, add the next numbered file. Don't put `BEGIN`/`COMMIT` in it (the runner already wraps it), and don't quote table names (`000_init.sql` created them unquoted, so Postgres stores them in lowercase).
 
 ## Upload pipeline
@@ -249,7 +266,7 @@ The backend normally runs inside the dev compose stack (see the root README), wh
 
 ## Tests
 
-Integration tests (`tests/`, Vitest + supertest) drive the real Express app against a real PostgreSQL 17. The schema is built the way production gets it: the `000_init.sql` baseline, then the migration runner. Only the edges are faked: Resend (emails are recorded, and tests read tokens out of the link like a user would) and Google ID token verification.
+Integration tests (`tests/`, Vitest + supertest) drive the real Express app against a real PostgreSQL 17. The schema is built by the migration runner from an empty database, the way a new deployment gets it. Only the edges are faked: Resend (emails are recorded, and tests read tokens out of the link like a user would) and Google ID token verification.
 
 ```bash
 docker run -d --rm --name auberge-test-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=auberge_test -p 5433:5432 postgres:17
@@ -273,6 +290,6 @@ What they lock in:
 | Input | Malformed UUID params are a 400, before any SQL runs |
 | Uploads | The type is taken from the bytes: disguised files, a wrong declared type or a wrong extension are rejected with nothing stored and temp files removed; stored names are random |
 | Admin | Create, grant, revoke and "unavailable + revoke" take effect immediately and write `admin_audit` entries; non-admins can't grant |
-| Migrations | Re-running the runner on an up-to-date database is a no-op |
+| Migrations | A database built from the original baseline, with data in every legacy shape, upgrades to exactly the schema of a new database, with its data converted; the baseline file is unchanged; re-running the runner is a no-op |
 
 CI (`.github/workflows/ci.yml`) runs the typecheck and these tests against a `postgres:17` service container on every push and pull request, and builds the frontend. The workflow token is read-only. `npm run build` uses `tsconfig.build.json`, so tests never end up in `build/`.

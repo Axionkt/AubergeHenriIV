@@ -1,3 +1,4 @@
+import type { Pool } from "pg";
 import { afterAll, beforeAll, vi } from "vitest";
 import { applyTestEnv } from "./env";
 
@@ -16,7 +17,11 @@ vi.mock("../emails/mailer", async (importOriginal) => {
 
 // Each test file starts from empty tables (the schema is built once in
 // globalSetup.ts).
+let appPool: Pool;
+
 beforeAll(async () => {
+  // Kept for afterAll: a test may reset the module registry meanwhile.
+  appPool = (await import("../db")).default;
   const { resetDatabase } = await import("./helpers");
   await resetDatabase();
 
@@ -38,6 +43,5 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  const { default: pool } = await import("../db");
-  await pool.end();
+  await appPool.end();
 });
