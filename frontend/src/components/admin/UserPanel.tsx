@@ -4,7 +4,7 @@ import api from "../../lib/axios";
 import { keys } from "../../lib/query";
 import { User } from "../../types/user";
 import styles from "./Admin.module.css";
-import { formatDateTime } from "../../lib/time";
+import { formatDateTime } from "../../lib/dataFormatting";
 import Input from "../form/Input";
 
 export default function UsersPanel() {

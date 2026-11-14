@@ -4,95 +4,108 @@ import {
   uuidArrayField,
   type ValidationOutcome,
 } from "./shared/fields";
+import { toParisNextDayMidnightUTC } from "../utils/time";
 
 // ---------------------------------------------------------------------------
-// accessExpiry: an ISO 8601 datetime string, or null for no expiry.
+// accessExpiry: an ISO 8601 date string, or null for no expiry.
 // The client must explicitly send null to mean "no expiry", rather than
 // omitting the key.
 // ---------------------------------------------------------------------------
 
 const accessExpirySchema = z.iso
-  .date({
-    message: "La date d'expiration doit être une date ISO 8601 valide.",
-  })
-  .nullable();
+  .date({ message: "La date d'expiration doit être une date ISO 8601 valide." })
+  .nullable()
+  .transform((d) => (d === null ? null : toParisNextDayMidnightUTC(d)))
+  .refine((d) => d === null || new Date(d).getTime() > Date.now(), {
+    message: "La date d'expiration d'accès doit être dans le futur.",
+  });
 
 // ---------------------------------------------------------------------------
-// Apartment access — grant/revoke.
-// Reusing uuidArrayField keeps the "non-empty, deduped, capped" rules
-// identical for both id arrays.
+// Grant / revoke. The validators return one neutral shape (spaceIds) so the
+// space services don't care whether the body said apartmentIds or proSpaceIds.
 // ---------------------------------------------------------------------------
 
-export const userApartmentAccessRequestSchema = z
+export interface SpaceAccessGrant {
+  userIds: string[];
+  spaceIds: string[];
+  accessExpiry: string | null;
+}
+
+export interface SpaceAccessRevoke {
+  userIds: string[];
+  spaceIds: string[];
+}
+
+const apartmentGrantSchema = z
   .object({
     userIds: uuidArrayField(),
     apartmentIds: uuidArrayField(),
     accessExpiry: accessExpirySchema,
   })
-  .strict();
+  .strict()
+  .transform(
+    ({ userIds, apartmentIds, accessExpiry }): SpaceAccessGrant => ({
+      userIds,
+      spaceIds: apartmentIds,
+      accessExpiry,
+    }),
+  );
 
-export type UserApartmentAccessRequest = z.infer<
-  typeof userApartmentAccessRequestSchema
->;
+const apartmentRevokeSchema = z
+  .object({ userIds: uuidArrayField(), apartmentIds: uuidArrayField() })
+  .strict()
+  .transform(
+    ({ userIds, apartmentIds }): SpaceAccessRevoke => ({
+      userIds,
+      spaceIds: apartmentIds,
+    }),
+  );
+
+const proSpaceGrantSchema = z
+  .object({
+    userIds: uuidArrayField(),
+    proSpaceIds: uuidArrayField(),
+    accessExpiry: accessExpirySchema,
+  })
+  .strict()
+  .transform(
+    ({ userIds, proSpaceIds, accessExpiry }): SpaceAccessGrant => ({
+      userIds,
+      spaceIds: proSpaceIds,
+      accessExpiry,
+    }),
+  );
+
+const proSpaceRevokeSchema = z
+  .object({ userIds: uuidArrayField(), proSpaceIds: uuidArrayField() })
+  .strict()
+  .transform(
+    ({ userIds, proSpaceIds }): SpaceAccessRevoke => ({
+      userIds,
+      spaceIds: proSpaceIds,
+    }),
+  );
 
 export function validateUserApartmentAccessRequest(
   body: unknown,
-): ValidationOutcome<UserApartmentAccessRequest> {
-  return toValidationOutcome(userApartmentAccessRequestSchema.safeParse(body));
+): ValidationOutcome<SpaceAccessGrant> {
+  return toValidationOutcome(apartmentGrantSchema.safeParse(body));
 }
-
-export const userApartmentRevokeRequestSchema = z
-  .object({
-    userIds: uuidArrayField(),
-    apartmentIds: uuidArrayField(),
-  })
-  .strict();
-
-export type UserApartmentRevokeRequest = z.infer<
-  typeof userApartmentRevokeRequestSchema
->;
 
 export function validateUserApartmentRevokeRequest(
   body: unknown,
-): ValidationOutcome<UserApartmentRevokeRequest> {
-  return toValidationOutcome(userApartmentRevokeRequestSchema.safeParse(body));
+): ValidationOutcome<SpaceAccessRevoke> {
+  return toValidationOutcome(apartmentRevokeSchema.safeParse(body));
 }
-
-// ---------------------------------------------------------------------------
-// ProSpace access — same shape, just proSpaceIds instead of apartmentIds.
-// ---------------------------------------------------------------------------
-
-export const userProSpaceAccessRequestSchema = z
-  .object({
-    userIds: uuidArrayField(),
-    proSpaceIds: uuidArrayField(),
-    accessExpiry: accessExpirySchema,
-  })
-  .strict();
-
-export type UserProSpaceAccessRequest = z.infer<
-  typeof userProSpaceAccessRequestSchema
->;
 
 export function validateUserProSpaceAccessRequest(
   body: unknown,
-): ValidationOutcome<UserProSpaceAccessRequest> {
-  return toValidationOutcome(userProSpaceAccessRequestSchema.safeParse(body));
+): ValidationOutcome<SpaceAccessGrant> {
+  return toValidationOutcome(proSpaceGrantSchema.safeParse(body));
 }
-
-export const userProSpaceRevokeRequestSchema = z
-  .object({
-    userIds: uuidArrayField(),
-    proSpaceIds: uuidArrayField(),
-  })
-  .strict();
-
-export type UserProSpaceRevokeRequest = z.infer<
-  typeof userProSpaceRevokeRequestSchema
->;
 
 export function validateUserProSpaceRevokeRequest(
   body: unknown,
-): ValidationOutcome<UserProSpaceRevokeRequest> {
-  return toValidationOutcome(userProSpaceRevokeRequestSchema.safeParse(body));
+): ValidationOutcome<SpaceAccessRevoke> {
+  return toValidationOutcome(proSpaceRevokeSchema.safeParse(body));
 }

@@ -17,6 +17,11 @@ import {
   KitchenFieldConfig,
   ResourceEditConfig,
 } from "../../types/resourceEditForm";
+import {
+  toNumberOrNull,
+  toNumberOrUndefined,
+  toStringOrNull,
+} from "../../lib/dataFormatting";
 
 interface AptForm extends BaseResourceForm {
   inductionCooktopModel: string;
@@ -35,6 +40,7 @@ const EMPTY_APT: AptForm = {
   orientation: "",
   view: "",
   hasPrivateExterior: false,
+  hasPrivateParking: false,
   electricHeatingModel: "",
   bathroomTowelHeaterModel: "",
   electricWaterHeaterModel: "",
@@ -58,46 +64,17 @@ const EMPTY_APT: AptForm = {
 };
 
 function aptToForm(apt: ApartmentDetailsAdmin): AptForm {
-  return {
-    name: apt.name,
-    description: apt.description,
-    type: apt.type,
-    sizeCarrezSqm: apt.sizeCarrezSqm != null ? String(apt.sizeCarrezSqm) : "",
-    sizeFloorSqm: apt.sizeFloorSqm != null ? String(apt.sizeFloorSqm) : "",
-    floor: apt.floor,
-    orientation: apt.orientation,
-    view: apt.view ?? "",
-    hasPrivateExterior: apt.hasPrivateExterior,
-    electricHeatingModel: apt.electricHeatingModel ?? "",
-    bathroomTowelHeaterModel: apt.bathroomTowelHeaterModel ?? "",
-    electricWaterHeaterModel: apt.electricWaterHeaterModel ?? "",
-    inductionCooktopModel: apt.inductionCooktopModel ?? "",
-    ovenModel: apt.ovenModel ?? "",
-    rangeHoodModel: apt.rangeHoodModel ?? "",
-    kitchenCabinetsModel: apt.kitchenCabinetsModel ?? "",
-    dpeEnergyRating: apt.dpeEnergyRating ?? "",
-    dpeEnergyKwhPerSqmYear:
-      apt.dpeEnergyKwhPerSqmYear != null
-        ? String(apt.dpeEnergyKwhPerSqmYear)
-        : "",
-    dpeEmissionsRating: apt.dpeEmissionsRating ?? "",
-    dpeEmissionsKgPerSqmYear:
-      apt.dpeEmissionsKgPerSqmYear != null
-        ? String(apt.dpeEmissionsKgPerSqmYear)
-        : "",
-    previousTenantAnnualConsumptionEur:
-      apt.previousTenantAnnualConsumptionEur != null
-        ? String(apt.previousTenantAnnualConsumptionEur)
-        : "",
-    hasDoubleGlazedWindows: apt.hasDoubleGlazedWindows,
-    meterPowerKva: apt.meterPowerKva != null ? String(apt.meterPowerKva) : "",
-    deliveryPointId: apt.deliveryPointId ?? "",
-    hasFiberOptic: apt.hasFiberOptic,
-    hasCopperNetwork: apt.hasCopperNetwork,
-    hasTvOutlet: apt.hasTvOutlet,
-    landRegistryRefPre2025: apt.landRegistryRefPre2025 ?? "",
-    landRegistryRefPost2025: apt.landRegistryRefPost2025 ?? "",
-  };
+  const form = { ...EMPTY_APT } as Record<string, string | boolean>;
+
+  for (const key of Object.keys(EMPTY_APT) as (keyof AptForm)[]) {
+    const value = apt[key];
+    form[key] =
+      typeof EMPTY_APT[key] === "boolean"
+        ? Boolean(value)
+        : String(value ?? "");
+  }
+
+  return form as unknown as AptForm;
 }
 
 function formToPayload(form: AptForm): Record<string, unknown> {
@@ -105,12 +82,13 @@ function formToPayload(form: AptForm): Record<string, unknown> {
     name: form.name,
     description: form.description,
     type: form.type,
-    sizeCarrezSqm: Number(form.sizeCarrezSqm),
-    sizeFloorSqm: Number(form.sizeFloorSqm),
+    sizeCarrezSqm: toNumberOrUndefined(form.sizeCarrezSqm),
+    sizeFloorSqm: toNumberOrUndefined(form.sizeFloorSqm),
     floor: form.floor,
     orientation: form.orientation,
     view: form.view,
     hasPrivateExterior: form.hasPrivateExterior,
+    hasPrivateParking: form.hasPrivateParking,
     electricHeatingModel: form.electricHeatingModel,
     bathroomTowelHeaterModel: form.bathroomTowelHeaterModel,
     electricWaterHeaterModel: form.electricWaterHeaterModel,
@@ -118,15 +96,15 @@ function formToPayload(form: AptForm): Record<string, unknown> {
     ovenModel: form.ovenModel,
     rangeHoodModel: form.rangeHoodModel,
     kitchenCabinetsModel: form.kitchenCabinetsModel,
-    dpeEnergyRating: form.dpeEnergyRating,
-    dpeEnergyKwhPerSqmYear: Number(form.dpeEnergyKwhPerSqmYear),
-    dpeEmissionsRating: form.dpeEmissionsRating,
-    dpeEmissionsKgPerSqmYear: Number(form.dpeEmissionsKgPerSqmYear),
-    previousTenantAnnualConsumptionEur: Number(
+    dpeEnergyRating: toStringOrNull(form.dpeEnergyRating),
+    dpeEnergyKwhPerSqmYear: toNumberOrNull(form.dpeEnergyKwhPerSqmYear),
+    dpeEmissionsRating: toStringOrNull(form.dpeEmissionsRating),
+    dpeEmissionsKgPerSqmYear: toNumberOrNull(form.dpeEmissionsKgPerSqmYear),
+    previousTenantAnnualConsumptionEur: toStringOrNull(
       form.previousTenantAnnualConsumptionEur,
     ),
     hasDoubleGlazedWindows: form.hasDoubleGlazedWindows,
-    meterPowerKva: Number(form.meterPowerKva),
+    meterPowerKva: toNumberOrUndefined(form.meterPowerKva),
     deliveryPointId: form.deliveryPointId,
     hasFiberOptic: form.hasFiberOptic,
     hasCopperNetwork: form.hasCopperNetwork,
@@ -166,9 +144,10 @@ const apartmentEditConfig: ResourceEditConfig<ApartmentDetailsAdmin, AptForm> =
     },
     api: {
       detailUrl: (id) => `/admin/apartments/${id}`,
-      createUrl: "/admin/apartments/create",
+      createUrl: "/admin/apartments",
       mediaListUrl: (id) => `/admin/apartments/${id}/media`,
       mediaThumbnailUrl: (id) => `/admin/media/apartment/${id}/thumbnail`,
+      mediaPlanUrl: (id) => `/admin/media/apartment/${id}/plan`,
       mediaBulkUrl: (id) => `/admin/media/apartment/${id}`,
       mediaReorderUrl: (id) => `/admin/media/apartment/${id}/reorder`,
     },
@@ -408,7 +387,7 @@ export default function ApartmentsPanel() {
                               : "badge badge-danger"
                           }
                         >
-                          {apt.isAvailable ? "Disponible" : "Indisponible"}
+                          {apt.isAvailable ? "Disponible" : "Occupé"}
                         </span>
                       </div>
                     </td>
@@ -493,7 +472,7 @@ export default function ApartmentsPanel() {
 
       <ConfirmModal
         isOpen={!!availabilityTarget}
-        title="Rendre l'appartement indisponible"
+        title="Rendre l'appartement occupé"
         message={`Voulez-vous également révoquer tous les accès existants pour "${availabilityTarget?.name}" ?`}
         confirmLabel="Révoquer les accès"
         denyLabel="Ne pas révoquer"

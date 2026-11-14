@@ -1,5 +1,6 @@
 export type MediaContext = "apartment" | "common-space";
-export type MediaType = "image" | "video";
+export type MediaType = "IMAGE" | "VIDEO" | "DOCUMENT";
+export type PlanType = Exclude<MediaType, "VIDEO">;
 
 export interface MediaItem {
   id: string;

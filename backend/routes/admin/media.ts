@@ -1,7 +1,6 @@
-import { Router } from "express";
-import multer from "multer";
+import { Router, Request, Response, NextFunction } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
-import AdminMediaServices from "../../services/admin/AdminMediaServices";
+import AdminMediaService from "../../services/admin/AdminMediaService";
 import {
   registerParam,
   registerUuidParams,
@@ -9,54 +8,95 @@ import {
 import {
   MediaContext,
   mediaContextParamSchema,
+  singletonMediaRoleParamSchema,
+  validateDeleteMediaRequest,
   validateReorderMediaRequest,
   validateUploadMediaFiles,
+  validateUploadPlanFile,
   validateUploadThumbnailFile,
 } from "../../schemas/media";
 import { assertValid } from "../../utils/validation";
+import { audit } from "../../utils/audit";
 import {
-  MAX_MEDIA_AT_ONCE,
-  MAX_MEDIA_SIZE_BYTES,
-  MAX_THUMBNAIL_SIZE_BYTES,
-} from "../../schemas/shared/fileUpload";
+  cleanupUploads,
+  uploadMedia,
+  uploadPlan,
+  uploadThumbnail,
+} from "../../utils/uploadStorage";
+
+const SINGLETON_MEDIA_CONFIG = {
+  thumbnail: {
+    role: "THUMBNAIL",
+    upload: uploadThumbnail.single("thumbnail"),
+    validate: validateUploadThumbnailFile,
+  },
+  plan: {
+    role: "PLAN",
+    upload: uploadPlan.single("plan"),
+    validate: validateUploadPlanFile,
+  },
+} as const;
+
+function uploadSingleton(req: Request, res: Response, next: NextFunction) {
+  const config =
+    SINGLETON_MEDIA_CONFIG[
+      req.params.role as keyof typeof SINGLETON_MEDIA_CONFIG
+    ];
+
+  config.upload(req, res, next);
+}
 
 const router = Router();
 registerUuidParams(router, ["contextUuid"]);
 registerParam(router, "context", mediaContextParamSchema);
-
-const uploadMedia = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: MAX_MEDIA_SIZE_BYTES,
-    files: MAX_MEDIA_AT_ONCE,
-  },
-});
-
-const uploadThumb = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: MAX_THUMBNAIL_SIZE_BYTES,
-    files: 1,
-  },
-});
+registerParam(router, "role", singletonMediaRoleParamSchema);
 
 router.post(
   "/:context{/:contextUuid}",
+  cleanupUploads,
   uploadMedia.array("files"),
   asyncHandler<{ context: MediaContext; contextUuid?: string }>(
     async (req, res) => {
       const context = req.params.context;
-      const contextUuid = req.params.contextUuid;
-
-      await AdminMediaServices.assertContextExists(context, contextUuid);
+      const contextUuid = req.params.contextUuid ?? null;
+      await AdminMediaService.assertContextExists(context, contextUuid);
       const result = assertValid(await validateUploadMediaFiles(req.files));
-      const inserted = await AdminMediaServices.uploadMediaFiles(
-        result,
+
+      const inserted = await AdminMediaService.uploadResourceMediaFiles(
         context,
         contextUuid,
+        result,
       );
 
+      audit("media.upload", {
+        targetType: context,
+        targetIds: contextUuid ? [contextUuid] : [],
+        mediaIds: inserted.map((m) => m.id),
+      });
       res.status(201).json(inserted);
+    },
+  ),
+);
+
+router.delete(
+  "/:context{/:contextUuid}",
+  asyncHandler<{ context: MediaContext; contextUuid?: string }>(
+    async (req, res) => {
+      const context = req.params.context;
+      const contextUuid = req.params.contextUuid ?? null;
+      const result = assertValid(validateDeleteMediaRequest(req.body));
+      await AdminMediaService.assertContextExists(context, contextUuid);
+
+      await AdminMediaService.deleteResourceMediaFiles(context, contextUuid, {
+        mediaIds: result.mediaIds,
+      });
+
+      audit("media.delete", {
+        targetType: context,
+        targetIds: contextUuid ? [contextUuid] : [],
+        mediaIds: result.mediaIds,
+      });
+      res.sendStatus(204);
     },
   ),
 );
@@ -66,34 +106,14 @@ router.put(
   asyncHandler<{ context: MediaContext; contextUuid?: string }>(
     async (req, res) => {
       const context = req.params.context;
-      const contextUuid = req.params.contextUuid;
+      const contextUuid = req.params.contextUuid ?? null;
       const result = assertValid(validateReorderMediaRequest(req.body));
+      await AdminMediaService.assertContextExists(context, contextUuid);
 
-      await AdminMediaServices.assertContextExists(context, contextUuid);
-      await AdminMediaServices.reorderMediaFiles(
-        result.mediaIds,
+      await AdminMediaService.reorderResourceMediaFiles(
         context,
         contextUuid,
-      );
-
-      res.sendStatus(204);
-    },
-  ),
-);
-
-router.delete(
-  "/:context{/:contextUuid}",
-  asyncHandler<{ context: MediaContext; contextUuid?: string }>(
-    async (req, res) => {
-      const context = req.params.context;
-      const contextUuid = req.params.contextUuid;
-      const result = assertValid(validateReorderMediaRequest(req.body));
-
-      await AdminMediaServices.assertContextExists(context, contextUuid);
-      await AdminMediaServices.deleteMediaFiles(
         result.mediaIds,
-        context,
-        contextUuid,
       );
 
       res.sendStatus(204);
@@ -102,42 +122,61 @@ router.delete(
 );
 
 router.post(
-  "/:context/:contextUuid/thumbnail",
-  uploadThumb.single("thumbnail"),
-  asyncHandler<{ context: MediaContext; contextUuid: string }>(
-    async (req, res) => {
-      const context = req.params.context;
-      const contextUuid = req.params.contextUuid;
+  "/:context/:contextUuid/:role",
+  cleanupUploads,
+  uploadSingleton,
+  asyncHandler<{
+    context: MediaContext;
+    contextUuid: string;
+    role: keyof typeof SINGLETON_MEDIA_CONFIG;
+  }>(async (req, res) => {
+    const { context, contextUuid, role } = req.params;
+    const config = SINGLETON_MEDIA_CONFIG[role];
 
-      await AdminMediaServices.assertContextExists(context, contextUuid, true);
-      const resultThumbnail = assertValid(
-        await validateUploadThumbnailFile(req.file),
-      );
+    await AdminMediaService.assertContextExists(context, contextUuid, true);
 
-      const result = await AdminMediaServices.uploadThumbnail(
-        resultThumbnail,
-        context,
-        contextUuid,
-      );
+    const validatedFile = assertValid(await config.validate(req.file));
 
-      res.status(201).json(result);
-    },
-  ),
+    const result = await AdminMediaService.uploadResourceSingleton(
+      context,
+      contextUuid,
+      config.role,
+      validatedFile,
+    );
+
+    audit("media.upload", {
+      targetType: context,
+      targetIds: [contextUuid],
+      role: config.role,
+      mediaIds: [result.id],
+    });
+    res.status(201).json(result);
+  }),
 );
 
 router.delete(
-  "/:context/:contextUuid/thumbnail",
-  asyncHandler<{ context: MediaContext; contextUuid: string }>(
-    async (req, res) => {
-      const context = req.params.context;
-      const contextUuid = req.params.contextUuid;
+  "/:context/:contextUuid/:role",
+  asyncHandler<{
+    context: MediaContext;
+    contextUuid: string;
+    role: keyof typeof SINGLETON_MEDIA_CONFIG;
+  }>(async (req, res) => {
+    const { context, contextUuid, role } = req.params;
+    const config = SINGLETON_MEDIA_CONFIG[role];
 
-      await AdminMediaServices.assertContextExists(context, contextUuid, true);
-      await AdminMediaServices.deleteThumbnail(context, contextUuid);
+    await AdminMediaService.assertContextExists(context, contextUuid, true);
 
-      res.sendStatus(204);
-    },
-  ),
+    await AdminMediaService.deleteResourceMediaFiles(context, contextUuid, {
+      roles: [config.role],
+    });
+
+    audit("media.delete", {
+      targetType: context,
+      targetIds: [contextUuid],
+      role: config.role,
+    });
+    res.sendStatus(204);
+  }),
 );
 
 export default router;

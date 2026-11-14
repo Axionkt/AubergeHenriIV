@@ -47,6 +47,7 @@ export default function ResourceEditForm<
     handleAddMediaFiles,
     thumbnailSrc,
     showThumbnailDelete,
+    plan,
     newCount,
     saving,
     msg,
@@ -168,6 +169,7 @@ export default function ResourceEditForm<
           />
           <Textarea
             label="Description"
+            toolbar
             value={form.description}
             onChange={setField("description")}
             placeholder={copy.descriptionPlaceholder}
@@ -236,13 +238,18 @@ export default function ResourceEditForm<
           checked={form.hasPrivateExterior}
           onChange={setBool("hasPrivateExterior")}
         />
+        <Checkbox
+          label="Parking privé"
+          checked={form.hasPrivateParking}
+          onChange={setBool("hasPrivateParking")}
+        />
       </div>
 
       <div className={styles.editSection}>
         <h4>Chauffage & Eau chaude</h4>
         <div className={styles.fieldsRow}>
           <Input
-            label="Chauffage électrique"
+            label="Chauffage"
             value={form.electricHeatingModel}
             onChange={setField("electricHeatingModel")}
             placeholder="Modèle…"
@@ -258,7 +265,7 @@ export default function ResourceEditForm<
             required
           />
           <Input
-            label="Chauffe-eau électrique"
+            label="Chauffe-eau"
             value={form.electricWaterHeaterModel}
             onChange={setField("electricWaterHeaterModel")}
             placeholder="Modèle…"
@@ -296,7 +303,6 @@ export default function ResourceEditForm<
             onChange={setField("dpeEnergyRating")}
             placeholder="A, B, C…"
             error={fieldErrors.dpeEnergyRating}
-            required
           />
           <Input
             label="Consommation (kWh/m²/an)"
@@ -305,7 +311,6 @@ export default function ResourceEditForm<
             onChange={setField("dpeEnergyKwhPerSqmYear")}
             placeholder="120"
             error={fieldErrors.dpeEnergyKwhPerSqmYear}
-            required
           />
           <Input
             label="Classe émissions"
@@ -313,7 +318,6 @@ export default function ResourceEditForm<
             onChange={setField("dpeEmissionsRating")}
             placeholder="A, B, C…"
             error={fieldErrors.dpeEmissionsRating}
-            required
           />
           <Input
             label="Émissions GES (kg/m²/an)"
@@ -322,16 +326,13 @@ export default function ResourceEditForm<
             onChange={setField("dpeEmissionsKgPerSqmYear")}
             placeholder="25"
             error={fieldErrors.dpeEmissionsKgPerSqmYear}
-            required
           />
           <Input
             label="Conso. locataire préc. (€/an)"
-            type="number"
             value={form.previousTenantAnnualConsumptionEur}
             onChange={setField("previousTenantAnnualConsumptionEur")}
             placeholder="1200"
             error={fieldErrors.previousTenantAnnualConsumptionEur}
-            required
           />
           <Input
             label="Puissance compteur (kVA)"
@@ -399,6 +400,100 @@ export default function ResourceEditForm<
             required
           />
         </div>
+      </div>
+
+      <div className={styles.editSection}>
+        <h4>Plan</h4>
+        {(() => {
+          const showImagePreview = plan.hasPlan && !plan.isPdf;
+          return (
+            <div className={styles.planRow}>
+              {showImagePreview && (
+                <div className={styles.planPreview}>
+                  <img
+                    src={plan.imageSrc ?? undefined}
+                    alt="Plan"
+                    className={styles.planPreviewImg}
+                  />
+                </div>
+              )}
+
+              <div className={styles.planActions}>
+                <div className={styles.planButtons}>
+                  {!showImagePreview && (
+                    <span className={styles.planStatus}>
+                      {plan.hasPlan ? (
+                        <>
+                          <span className={styles.planFileBadge}>PDF</span>
+                          <span className={styles.planFileName}>
+                            {plan.fileName ?? "Plan"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className={styles.planEmpty}>
+                          {plan.markedForDeletion
+                            ? "Plan supprimé"
+                            : "Aucun plan"}
+                        </span>
+                      )}
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => plan.inputRef.current?.click()}
+                  >
+                    {plan.hasPlan ? "Remplacer" : "Ajouter un plan"}
+                  </button>
+                  {plan.existingHref && (
+                    <a
+                      href={plan.existingHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-ghost btn-sm"
+                    >
+                      Ouvrir
+                    </a>
+                  )}
+                  {plan.hasPlan && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={plan.remove}
+                    >
+                      {plan.isNew ? "Annuler la sélection" : "Supprimer"}
+                    </button>
+                  )}
+                  {plan.markedForDeletion && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={plan.undoRemove}
+                    >
+                      Annuler la suppression
+                    </button>
+                  )}
+                </div>
+                <p className={styles.thumbCaption}>
+                  JPG, PNG, WEBP ou PDF · Max 20 Mo
+                </p>
+              </div>
+
+              <input
+                ref={plan.inputRef}
+                type="file"
+                accept={plan.accept}
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) plan.pick(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       {resourceId && (

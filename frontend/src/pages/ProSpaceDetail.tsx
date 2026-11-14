@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import api from "../lib/axios";
@@ -6,14 +5,15 @@ import { keys } from "../lib/query";
 import styles from "./ProSpaceDetail.module.css";
 import { MediaItem } from "../types/media";
 import { ProSpaceDetails } from "../types/proSpace";
-import { formatDateTime } from "../lib/time";
+import { formatDateTime, formatInt, noData } from "../lib/dataFormatting";
 import { useAccessTokenKeepAlive } from "../hooks/useAccessTokenKeepAlive";
+import { FormattedText } from "../components/form/Textarea";
+import MediaBanner from "../components/MediaBanner";
+import PlanCard from "../components/PlanCard";
 
 export default function ProSpaceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  const [selected, setSelected] = useState<MediaItem | null>(null);
 
   const {
     data: space,
@@ -37,8 +37,17 @@ export default function ProSpaceDetail() {
     enabled: !!id && !!space,
   });
 
+  const { data: commonSpaceMediaData } = useQuery<{ media: MediaItem[] }>({
+    queryKey: [...keys.commonSpaces(), "pro-space"],
+    queryFn: () =>
+      api
+        .get<{ media: MediaItem[] }>("/pro-spaces/common-space/media")
+        .then((r) => r.data),
+    enabled: !!space,
+  });
+
   const media = mediaData?.media ?? [];
-  const current = selected ?? media[0] ?? null;
+  const commonSpaceMedia = commonSpaceMediaData?.media ?? [];
 
   function isExpired(d?: string | null) {
     return !!d && new Date(d) < new Date();
@@ -47,28 +56,7 @@ export default function ProSpaceDetail() {
   if (isLoading)
     return (
       <div className={styles.page}>
-        <div className={styles.hero}>
-          <div className={styles.heroMedia}>
-            <div
-              className="skeleton-dark"
-              style={{ width: "100%", height: "100%", borderRadius: 0 }}
-            />
-          </div>
-          <div className={styles.thumbStrip}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="skeleton-dark"
-                style={{
-                  width: 100,
-                  height: 64,
-                  flexShrink: 0,
-                  borderRadius: 4,
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <MediaBanner loading thumbStripPosition="bottom" />
 
         <div className="page-content">
           <div
@@ -205,57 +193,12 @@ export default function ProSpaceDetail() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.hero}>
-        <div className={styles.heroMedia}>
-          {current ? (
-            current.type === "video" ? (
-              <video
-                key={`/api/${current.url}`}
-                src={`/api/${current.url}`}
-                controls
-                className={styles.heroEl}
-              />
-            ) : (
-              <img
-                src={`/api/${current.url}`}
-                alt={space.name}
-                className={styles.heroEl}
-              />
-            )
-          ) : space.thumbnailUrl ? (
-            <img
-              src={`/api/${space.thumbnailUrl}`}
-              alt={space.name}
-              className={styles.heroEl}
-            />
-          ) : (
-            <div className={styles.heroPlaceholder} />
-          )}
-        </div>
-
-        {media.length > 1 && (
-          <div className={styles.thumbStrip}>
-            {media.map((item, i) => (
-              <button
-                key={i}
-                onClick={() => setSelected(item)}
-                className={`${styles.thumb} ${current === item ? styles.thumbActive : ""}`}
-                aria-label={`Média ${i + 1}`}
-              >
-                {item.type === "video" ? (
-                  <span className={styles.thumbPlay}>▶</span>
-                ) : (
-                  <img
-                    src={`/api/${item.url}`}
-                    alt=""
-                    className={styles.thumbImg}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <MediaBanner
+        media={media}
+        thumbnailUrl={space.thumbnailUrl}
+        altText={space.name}
+        thumbStripPosition="bottom"
+      />
 
       <div className="page-content">
         <div className={styles.layout}>
@@ -269,171 +212,175 @@ export default function ProSpaceDetail() {
               </span>
             </h1>
 
-            {space.description && (
-              <div className={`card ${styles.descCard}`}>
-                <h4>À propos de cet espace pro</h4>
-                <p className={styles.desc}>{space.description}</p>
-              </div>
-            )}
+            <div className={`card ${styles.descCard}`}>
+              <h4>À propos de cet espace pro</h4>
+              <FormattedText value={space.description} />
+            </div>
 
             <div className={`card ${styles.detailsCard}`}>
               <h4>Caractéristiques</h4>
               <div className={styles.detailsGrid}>
-                {space.type && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Type</span>
-                    <span className={styles.dVal}>{space.type}</span>
-                  </div>
-                )}
-                {space.floor && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Étage</span>
-                    <span className={styles.dVal}>{space.floor}</span>
-                  </div>
-                )}
-                {space.sizeCarrezSqm != null && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Surface Carrez</span>
-                    <span className={styles.dVal}>
-                      {space.sizeCarrezSqm} m²
-                    </span>
-                  </div>
-                )}
-                {space.sizeFloorSqm != null && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Surface au sol</span>
-                    <span className={styles.dVal}>{space.sizeFloorSqm} m²</span>
-                  </div>
-                )}
-                {space.orientation && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Orientation</span>
-                    <span className={styles.dVal}>{space.orientation}</span>
-                  </div>
-                )}
-                {space.view && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Vue</span>
-                    <span className={styles.dVal}>{space.view}</span>
-                  </div>
-                )}
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Type</span>
+                  <span className={styles.dVal}>{space.type}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Étage</span>
+                  <span className={styles.dVal}>{space.floor}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Surface Carrez</span>
+                  <span className={styles.dVal}>
+                    {formatInt(space.sizeCarrezSqm)} m²
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Surface au sol</span>
+                  <span className={styles.dVal}>
+                    {formatInt(space.sizeFloorSqm)} m²
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Orientation</span>
+                  <span className={styles.dVal}>{space.orientation}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Vue</span>
+                  <span className={styles.dVal}>{space.view}</span>
+                </div>
                 <div className={styles.detailItem}>
                   <span className={styles.dLabel}>Extérieur privé</span>
                   <span className={styles.dVal}>
                     {space.hasPrivateExterior ? "Oui" : "Non"}
                   </span>
                 </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Parking privé</span>
+                  <span className={styles.dVal}>
+                    {space.hasPrivateParking ? "Oui" : "Non"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {(space.electricHeatingModel ||
-              space.bathroomTowelHeaterModel ||
-              space.electricWaterHeaterModel) && (
-              <div className={`card ${styles.detailsCard}`}>
-                <h4>Chauffage & Eau chaude</h4>
-                <div className={styles.detailsGrid}>
-                  {space.electricHeatingModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>
-                        Chauffage électrique
-                      </span>
-                      <span className={styles.dVal}>
-                        {space.electricHeatingModel}
-                      </span>
-                    </div>
-                  )}
-                  {space.bathroomTowelHeaterModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Sèche-serviette</span>
-                      <span className={styles.dVal}>
-                        {space.bathroomTowelHeaterModel}
-                      </span>
-                    </div>
-                  )}
-                  {space.electricWaterHeaterModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Chauffe-eau</span>
-                      <span className={styles.dVal}>
-                        {space.electricWaterHeaterModel}
-                      </span>
-                    </div>
-                  )}
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Informations</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Point de livraison</span>
+                  <span className={styles.dVal}>{space.deliveryPointId}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>
+                    Réf. cadastrale (avant 2025)
+                  </span>
+                  <span className={styles.dVal}>
+                    {space.landRegistryRefPre2025}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>
+                    Réf. cadastrale (après 2025)
+                  </span>
+                  <span className={styles.dVal}>
+                    {space.landRegistryRefPost2025}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {space.kitchenCabinetsModel && (
-              <div className={`card ${styles.detailsCard}`}>
-                <h4>Cuisine</h4>
-                <div className={styles.detailsGrid}>
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Meubles de cuisine</span>
-                    <span className={styles.dVal}>
-                      {space.kitchenCabinetsModel}
-                    </span>
-                  </div>
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Chauffage & Eau chaude</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Chauffage</span>
+                  <span className={styles.dVal}>
+                    {space.electricHeatingModel}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Sèche-serviette</span>
+                  <span className={styles.dVal}>
+                    {space.bathroomTowelHeaterModel}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Chauffe-eau</span>
+                  <span className={styles.dVal}>
+                    {space.electricWaterHeaterModel}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {(space.dpeEnergyRating ||
-              space.dpeEmissionsRating ||
-              space.dpeEnergyKwhPerSqmYear != null ||
-              space.dpeEmissionsKgPerSqmYear != null) && (
-              <div className={`card ${styles.detailsCard}`}>
-                <h4>Performance énergétique (DPE)</h4>
-                <div className={styles.detailsGrid}>
-                  {space.dpeEnergyRating && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Classe énergie</span>
-                      <span className={styles.dVal}>
-                        {space.dpeEnergyRating}
-                      </span>
-                    </div>
-                  )}
-                  {space.dpeEnergyKwhPerSqmYear != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Consommation</span>
-                      <span className={styles.dVal}>
-                        {space.dpeEnergyKwhPerSqmYear} kWh/m²/an
-                      </span>
-                    </div>
-                  )}
-                  {space.dpeEmissionsRating && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Classe émissions</span>
-                      <span className={styles.dVal}>
-                        {space.dpeEmissionsRating}
-                      </span>
-                    </div>
-                  )}
-                  {space.dpeEmissionsKgPerSqmYear != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Émissions GES</span>
-                      <span className={styles.dVal}>
-                        {space.dpeEmissionsKgPerSqmYear} kg/m²/an
-                      </span>
-                    </div>
-                  )}
-                  {space.hasDoubleGlazedWindows != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Double vitrage</span>
-                      <span className={styles.dVal}>
-                        {space.hasDoubleGlazedWindows ? "Oui" : "Non"}
-                      </span>
-                    </div>
-                  )}
-                  {space.meterPowerKva != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Puissance compteur</span>
-                      <span className={styles.dVal}>
-                        {space.meterPowerKva} kVA
-                      </span>
-                    </div>
-                  )}
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Cuisine</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Meubles de cuisine</span>
+                  <span className={styles.dVal}>
+                    {space.kitchenCabinetsModel}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
+
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Performance énergétique (DPE)</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Classe énergie</span>
+                  <span className={styles.dVal}>
+                    {space.dpeEnergyRating ?? noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Consommation</span>
+                  <span className={styles.dVal}>
+                    {space.dpeEnergyKwhPerSqmYear != null
+                      ? `${space.dpeEnergyKwhPerSqmYear} kWh/m²/an`
+                      : noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Classe émissions</span>
+                  <span className={styles.dVal}>
+                    {space.dpeEmissionsRating ?? noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Émissions GES</span>
+                  <span className={styles.dVal}>
+                    {space.dpeEmissionsKgPerSqmYear != null
+                      ? `${space.dpeEmissionsKgPerSqmYear} kg/m²/an`
+                      : noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Double vitrage</span>
+                  <span className={styles.dVal}>
+                    {space.hasDoubleGlazedWindows ? "Oui" : "Non"}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Puissance compteur</span>
+                  <span className={styles.dVal}>{space.meterPowerKva} kVA</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>
+                    Conso. locataire préc. (€/an)
+                    <em className={styles.dNote}>
+                      (basées sur le dernier résident, non contractuelles)
+                    </em>
+                  </span>
+                  <span className={styles.dVal}>
+                    {space.previousTenantAnnualConsumptionEur != null
+                      ? `${space.previousTenantAnnualConsumptionEur} €`
+                      : noData}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             <div className={`card ${styles.detailsCard}`}>
               <h4>Connectivité</h4>
@@ -498,9 +445,35 @@ export default function ProSpaceDetail() {
                 </span>
               </div>
             </div>
+
+            <PlanCard
+              url={space.planUrl}
+              type={space.planType}
+              className={styles.accessCard}
+            />
           </aside>
         </div>
+
+        <h2>Espaces communs</h2>
+        <p className="section-subtitle">Une parenthèse de verdure</p>
+        <p className={styles.desc}>
+          Au cœur de l'immeuble, la cour arborée offre une véritable parenthèse
+          de fraîcheur en plein centre-ville. Palmiers, olivier, érable du
+          Japon, lauriers roses et jasmin composent un décor végétal plein de
+          charme, à l'abri de l'agitation urbaine.
+          <br />
+          <br />
+          Ce petit havre de verdure apporte une touche de sérénité et de
+          convivialité à tous les résidents de l'Auberge Henri IV, dans un cadre
+          privilégié, à deux pas du Château de Pau et de la place Clémenceau.
+        </p>
       </div>
+
+      <MediaBanner
+        media={commonSpaceMedia}
+        altText="Espaces communs"
+        thumbStripPosition="top"
+      />
     </div>
   );
 }

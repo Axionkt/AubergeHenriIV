@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  richTextField,
   textField,
   toValidationOutcome,
   type ValidationOutcome,
@@ -19,10 +20,10 @@ const createdAtMessage = "La date doit être une date ISO 8601 valide.";
 export const createReviewRequestSchema = z
   .object({
     authorName: textField(1, 100),
-    text: textField(1, 5000),
+    text: richTextField(1, 5000),
     createdAt: z.iso
       .date({ message: createdAtMessage })
-      .nullable()
+      .nullish()
       .transform((value) => value ?? new Date().toISOString().split("T")[0]),
   })
   .strict();
@@ -44,8 +45,11 @@ export function validateCreateReviewRequest(
 export const updateReviewRequestSchema = z
   .object({
     authorName: textField(1, 100).optional(),
-    text: textField(1, 5000).optional(),
+    text: richTextField(1, 5000).optional(),
     createdAt: z.iso.date({ message: createdAtMessage }).optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, {
+    message: "Au moins un champ doit être fourni.",
   })
   .strict();
 

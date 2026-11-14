@@ -61,6 +61,16 @@
 .dVal.end {
   text-align: end;
 }
+.dNote {
+  display: block;
+  font-size: 0.7rem;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.8;
+}
 
 .accessCard {
   display: flex;

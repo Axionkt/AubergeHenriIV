@@ -8,7 +8,7 @@ import ConfirmModal from "../ConfirmModal";
 import { Review } from "../../types/review";
 import Input from "../form/Input";
 import DateInput from "../form/DateInput";
-import Textarea from "../form/Textarea";
+import Textarea, { FormattedText } from "../form/Textarea";
 
 interface ReviewForm {
   authorName: string;
@@ -138,6 +138,7 @@ export default function ReviewsPanel() {
         </div>
         <Textarea
           label="Témoignage"
+          toolbar
           value={form.text}
           onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
           placeholder="Rédigez le témoignage…"
@@ -229,7 +230,7 @@ export default function ReviewsPanel() {
               <div className={styles.reviewTop}>
                 <span className={styles.reviewAuthor}>{r.authorName}</span>
               </div>
-              <p className={styles.reviewText}>{r.text}</p>
+              <FormattedText className={styles.reviewText} value={r.text} />
               {r.createdAt && (
                 <p className={styles.reviewDate}>
                   {new Date(r.createdAt).toLocaleDateString("fr-FR", {

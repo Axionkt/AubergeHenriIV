@@ -15,6 +15,8 @@ interface DateInputProps {
   id?: string;
 }
 
+type View = "days" | "months" | "years";
+
 // ── Helpers ───────────────────────────────────────────────
 
 const MONTHS = [
@@ -31,7 +33,22 @@ const MONTHS = [
   "Novembre",
   "Décembre",
 ];
+const MONTHS_SHORT = [
+  "Janv.",
+  "Févr.",
+  "Mars",
+  "Avr.",
+  "Mai",
+  "Juin",
+  "Juil.",
+  "Août",
+  "Sept.",
+  "Oct.",
+  "Nov.",
+  "Déc.",
+];
 const DAY_LABELS = ["Di", "Lu", "Ma", "Me", "Je", "Ve", "Sa"];
+const YEARS_PER_PAGE = 12;
 
 function parseISO(
   iso: string | undefined,
@@ -59,6 +76,10 @@ function isoToDisplay(iso: string) {
   return `${String(p.d).padStart(2, "0")} / ${String(p.m).padStart(2, "0")} / ${p.y}`;
 }
 
+function pageStartFor(year: number) {
+  return year - (year % YEARS_PER_PAGE);
+}
+
 // ── Component ─────────────────────────────────────────────
 
 const DateInput = forwardRef<HTMLDivElement, DateInputProps>(
@@ -83,6 +104,7 @@ const DateInput = forwardRef<HTMLDivElement, DateInputProps>(
     const msgId = `${inputId}-msg`;
 
     const [open, setOpen] = useState(false);
+    const [view, setView] = useState<View>("days");
     const [internal, setInternal] = useState(value ?? defaultValue ?? "");
 
     const selected = parseISO(value ?? internal);
@@ -91,6 +113,7 @@ const DateInput = forwardRef<HTMLDivElement, DateInputProps>(
       y: selected?.y ?? today.getFullYear(),
       m: selected?.m ?? today.getMonth() + 1,
     });
+    const [yearPage, setYearPage] = useState(() => pageStartFor(cursor.y));
 
     const rootEl = useRef<HTMLDivElement>(null);
     const current = value ?? internal;
@@ -113,10 +136,29 @@ const DateInput = forwardRef<HTMLDivElement, DateInputProps>(
       return () => document.removeEventListener("mousedown", handler);
     }, [open]);
 
+    // Always reopen on the day view
+    useEffect(() => {
+      if (!open) setView("days");
+    }, [open]);
+
     function isDisabledDay(y: number, m: number, d: number) {
       const iso = toISO(y, m, d);
       if (min && iso < min) return true;
       if (max && iso > max) return true;
+      return false;
+    }
+
+    function isDisabledMonth(y: number, m: number) {
+      const first = toISO(y, m, 1);
+      const last = toISO(y, m, daysInMonth(y, m));
+      if (min && last < min) return true;
+      if (max && first > max) return true;
+      return false;
+    }
+
+    function isDisabledYear(y: number) {
+      if (min && toISO(y, 12, 31) < min) return true;
+      if (max && toISO(y, 1, 1) > max) return true;
       return false;
     }
 
@@ -138,6 +180,28 @@ const DateInput = forwardRef<HTMLDivElement, DateInputProps>(
         c.m === 12 ? { y: c.y + 1, m: 1 } : { y: c.y, m: c.m + 1 },
       );
     }
+
+    function handlePrev() {
+      if (view === "days") prevMonth();
+      else if (view === "months") setCursor((c) => ({ ...c, y: c.y - 1 }));
+      else setYearPage((p) => p - YEARS_PER_PAGE);
+    }
+    function handleNext() {
+      if (view === "days") nextMonth();
+      else if (view === "months") setCursor((c) => ({ ...c, y: c.y + 1 }));
+      else setYearPage((p) => p + YEARS_PER_PAGE);
+    }
+
+    function openYears() {
+      setYearPage(pageStartFor(cursor.y));
+      setView("years");
+    }
+
+    const navLabels = {
+      days: ["Mois précédent", "Mois suivant"],
+      months: ["Année précédente", "Année suivante"],
+      years: ["Années précédentes", "Années suivantes"],
+    }[view];
 
     const cells: (number | null)[] = [
       ...Array(firstDayOfMonth(cursor.y, cursor.m)).fill(null),
@@ -208,97 +272,195 @@ const DateInput = forwardRef<HTMLDivElement, DateInputProps>(
             <div className={styles.calHeader}>
               <button
                 type="button"
-                onClick={prevMonth}
+                onClick={handlePrev}
                 className={styles.navBtn}
-                aria-label="Previous month"
+                aria-label={navLabels[0]}
               >
                 <ChevronIcon direction="left" />
               </button>
-              <span className={styles.monthLabel}>
-                {MONTHS[cursor.m - 1]} {cursor.y}
-              </span>
+
+              {view === "days" && (
+                <button
+                  type="button"
+                  className={styles.monthLabelBtn}
+                  onClick={() => setView("months")}
+                  aria-label="Choisir le mois et l'année"
+                >
+                  {MONTHS[cursor.m - 1]} {cursor.y}
+                  <CaretIcon />
+                </button>
+              )}
+              {view === "months" && (
+                <button
+                  type="button"
+                  className={styles.monthLabelBtn}
+                  onClick={openYears}
+                  aria-label="Choisir l'année"
+                >
+                  {cursor.y}
+                  <CaretIcon />
+                </button>
+              )}
+              {view === "years" && (
+                <span className={styles.monthLabel}>
+                  {yearPage} - {yearPage + YEARS_PER_PAGE - 1}
+                </span>
+              )}
+
               <button
                 type="button"
-                onClick={nextMonth}
+                onClick={handleNext}
                 className={styles.navBtn}
-                aria-label="Next month"
+                aria-label={navLabels[1]}
               >
                 <ChevronIcon direction="right" />
               </button>
             </div>
 
-            <div className={styles.grid}>
-              {DAY_LABELS.map((d) => (
-                <span key={d} className={styles.dayLabel}>
-                  {d}
-                </span>
-              ))}
-              {cells.map((day, i) => {
-                if (!day) return <span key={`empty-${i}`} />;
-                const iso = toISO(cursor.y, cursor.m, day);
-                const isSelected = iso === current;
-                const isToday = iso === todayISO;
-                const isOff = isDisabledDay(cursor.y, cursor.m, day);
+            {view === "days" && (
+              <div className={styles.grid}>
+                {DAY_LABELS.map((d) => (
+                  <span key={d} className={styles.dayLabel}>
+                    {d}
+                  </span>
+                ))}
+                {cells.map((day, i) => {
+                  if (!day) return <span key={`empty-${i}`} />;
+                  const iso = toISO(cursor.y, cursor.m, day);
+                  const isSelected = iso === current;
+                  const isToday = iso === todayISO;
+                  const isOff = isDisabledDay(cursor.y, cursor.m, day);
 
-                return (
-                  <button
-                    key={iso}
-                    type="button"
-                    disabled={isOff}
-                    onClick={() => selectDay(cursor.y, cursor.m, day)}
-                    aria-label={`${day} ${MONTHS[cursor.m - 1]} ${cursor.y}`}
-                    aria-pressed={isSelected}
-                    className={[
-                      styles.dayBtn,
-                      isToday && !isSelected ? styles.dayToday : "",
-                      isSelected ? styles.daySelected : "",
-                    ]
-                      .join(" ")
-                      .trim()}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
+                  return (
+                    <button
+                      key={iso}
+                      type="button"
+                      disabled={isOff}
+                      onClick={() => selectDay(cursor.y, cursor.m, day)}
+                      aria-label={`${day} ${MONTHS[cursor.m - 1]} ${cursor.y}`}
+                      aria-pressed={isSelected}
+                      className={[
+                        styles.dayBtn,
+                        isToday && !isSelected ? styles.dayToday : "",
+                        isSelected ? styles.daySelected : "",
+                      ]
+                        .join(" ")
+                        .trim()}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-            <div className={styles.calFooter}>
-              <button
-                type="button"
-                className={styles.todayBtn}
-                disabled={isDisabledDay(
-                  today.getFullYear(),
-                  today.getMonth() + 1,
-                  today.getDate(),
-                )}
-                onClick={() => {
-                  setCursor({
-                    y: today.getFullYear(),
-                    m: today.getMonth() + 1,
-                  });
-                  selectDay(
+            {view === "months" && (
+              <div className={styles.pickerGrid}>
+                {MONTHS_SHORT.map((name, i) => {
+                  const m = i + 1;
+                  const isSelected =
+                    selected?.y === cursor.y && selected?.m === m;
+                  const isThisMonth =
+                    today.getFullYear() === cursor.y &&
+                    today.getMonth() + 1 === m;
+
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      disabled={isDisabledMonth(cursor.y, m)}
+                      aria-label={`${MONTHS[i]} ${cursor.y}`}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setCursor((c) => ({ ...c, m }));
+                        setView("days");
+                      }}
+                      className={[
+                        styles.pickerBtn,
+                        isThisMonth && !isSelected ? styles.pickerCurrent : "",
+                        isSelected ? styles.pickerSelected : "",
+                      ]
+                        .join(" ")
+                        .trim()}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {view === "years" && (
+              <div className={styles.pickerGrid}>
+                {Array.from({ length: YEARS_PER_PAGE }, (_, i) => {
+                  const y = yearPage + i;
+                  const isSelected = selected?.y === y;
+                  const isThisYear = today.getFullYear() === y;
+
+                  return (
+                    <button
+                      key={y}
+                      type="button"
+                      disabled={isDisabledYear(y)}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setCursor((c) => ({ ...c, y }));
+                        setView("months");
+                      }}
+                      className={[
+                        styles.pickerBtn,
+                        isThisYear && !isSelected ? styles.pickerCurrent : "",
+                        isSelected ? styles.pickerSelected : "",
+                      ]
+                        .join(" ")
+                        .trim()}
+                    >
+                      {y}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {view === "days" && (
+              <div className={styles.calFooter}>
+                <button
+                  type="button"
+                  className={styles.todayBtn}
+                  disabled={isDisabledDay(
                     today.getFullYear(),
                     today.getMonth() + 1,
                     today.getDate(),
-                  );
-                }}
-              >
-                Aujourd'hui
-              </button>
-              {current && (
-                <button
-                  type="button"
-                  className={styles.clearBtn}
+                  )}
                   onClick={() => {
-                    setInternal("");
-                    onChange?.("");
-                    setOpen(false);
+                    setCursor({
+                      y: today.getFullYear(),
+                      m: today.getMonth() + 1,
+                    });
+                    selectDay(
+                      today.getFullYear(),
+                      today.getMonth() + 1,
+                      today.getDate(),
+                    );
                   }}
                 >
-                  Effacer
+                  Aujourd'hui
                 </button>
-              )}
-            </div>
+                {current && (
+                  <button
+                    type="button"
+                    className={styles.clearBtn}
+                    onClick={() => {
+                      setInternal("");
+                      onChange?.("");
+                      setOpen(false);
+                    }}
+                  >
+                    Effacer
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -400,6 +562,27 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
           strokeLinejoin="round"
         />
       )}
+    </svg>
+  );
+}
+
+function CaretIcon() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <polyline
+        points="2,3.5 5,6.5 8,3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

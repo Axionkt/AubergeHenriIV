@@ -14,6 +14,11 @@ import {
   KitchenFieldConfig,
   ResourceEditConfig,
 } from "../../types/resourceEditForm";
+import {
+  toNumberOrNull,
+  toNumberOrUndefined,
+  toStringOrNull,
+} from "../../lib/dataFormatting";
 
 interface SpaceForm extends BaseResourceForm {
   kitchenCabinetsModel: string;
@@ -29,6 +34,7 @@ const EMPTY_SPACE: SpaceForm = {
   orientation: "",
   view: "",
   hasPrivateExterior: false,
+  hasPrivateParking: false,
   electricHeatingModel: "",
   bathroomTowelHeaterModel: "",
   electricWaterHeaterModel: "",
@@ -48,46 +54,18 @@ const EMPTY_SPACE: SpaceForm = {
   landRegistryRefPost2025: "",
 };
 
-function spaceToForm(space: ProSpaceDetailsAdmin): SpaceForm {
-  return {
-    name: space.name,
-    description: space.description,
-    type: space.type,
-    sizeCarrezSqm:
-      space.sizeCarrezSqm != null ? String(space.sizeCarrezSqm) : "",
-    sizeFloorSqm: space.sizeFloorSqm != null ? String(space.sizeFloorSqm) : "",
-    floor: space.floor,
-    orientation: space.orientation,
-    view: space.view ?? "",
-    hasPrivateExterior: space.hasPrivateExterior,
-    electricHeatingModel: space.electricHeatingModel ?? "",
-    bathroomTowelHeaterModel: space.bathroomTowelHeaterModel ?? "",
-    electricWaterHeaterModel: space.electricWaterHeaterModel ?? "",
-    kitchenCabinetsModel: space.kitchenCabinetsModel ?? "",
-    dpeEnergyRating: space.dpeEnergyRating ?? "",
-    dpeEnergyKwhPerSqmYear:
-      space.dpeEnergyKwhPerSqmYear != null
-        ? String(space.dpeEnergyKwhPerSqmYear)
-        : "",
-    dpeEmissionsRating: space.dpeEmissionsRating ?? "",
-    dpeEmissionsKgPerSqmYear:
-      space.dpeEmissionsKgPerSqmYear != null
-        ? String(space.dpeEmissionsKgPerSqmYear)
-        : "",
-    previousTenantAnnualConsumptionEur:
-      space.previousTenantAnnualConsumptionEur != null
-        ? String(space.previousTenantAnnualConsumptionEur)
-        : "",
-    hasDoubleGlazedWindows: space.hasDoubleGlazedWindows,
-    meterPowerKva:
-      space.meterPowerKva != null ? String(space.meterPowerKva) : "",
-    deliveryPointId: space.deliveryPointId ?? "",
-    hasFiberOptic: space.hasFiberOptic,
-    hasCopperNetwork: space.hasCopperNetwork,
-    hasTvOutlet: space.hasTvOutlet,
-    landRegistryRefPre2025: space.landRegistryRefPre2025 ?? "",
-    landRegistryRefPost2025: space.landRegistryRefPost2025 ?? "",
-  };
+function spaceToForm(apt: ProSpaceDetailsAdmin): SpaceForm {
+  const form = { ...EMPTY_SPACE } as Record<string, string | boolean>;
+
+  for (const key of Object.keys(EMPTY_SPACE) as (keyof SpaceForm)[]) {
+    const value = apt[key];
+    form[key] =
+      typeof EMPTY_SPACE[key] === "boolean"
+        ? Boolean(value)
+        : String(value ?? "");
+  }
+
+  return form as unknown as SpaceForm;
 }
 
 function formToPayload(form: SpaceForm): Record<string, unknown> {
@@ -95,25 +73,26 @@ function formToPayload(form: SpaceForm): Record<string, unknown> {
     name: form.name,
     description: form.description,
     type: form.type,
-    sizeCarrezSqm: Number(form.sizeCarrezSqm),
-    sizeFloorSqm: Number(form.sizeFloorSqm),
+    sizeCarrezSqm: toNumberOrUndefined(form.sizeCarrezSqm),
+    sizeFloorSqm: toNumberOrUndefined(form.sizeFloorSqm),
     floor: form.floor,
     orientation: form.orientation,
     view: form.view,
     hasPrivateExterior: form.hasPrivateExterior,
+    hasPrivateParking: form.hasPrivateParking,
     electricHeatingModel: form.electricHeatingModel,
     bathroomTowelHeaterModel: form.bathroomTowelHeaterModel,
     electricWaterHeaterModel: form.electricWaterHeaterModel,
     kitchenCabinetsModel: form.kitchenCabinetsModel,
-    dpeEnergyRating: form.dpeEnergyRating,
-    dpeEnergyKwhPerSqmYear: Number(form.dpeEnergyKwhPerSqmYear),
-    dpeEmissionsRating: form.dpeEmissionsRating,
-    dpeEmissionsKgPerSqmYear: Number(form.dpeEmissionsKgPerSqmYear),
-    previousTenantAnnualConsumptionEur: Number(
+    dpeEnergyRating: toStringOrNull(form.dpeEnergyRating),
+    dpeEnergyKwhPerSqmYear: toNumberOrNull(form.dpeEnergyKwhPerSqmYear),
+    dpeEmissionsRating: toStringOrNull(form.dpeEmissionsRating),
+    dpeEmissionsKgPerSqmYear: toNumberOrNull(form.dpeEmissionsKgPerSqmYear),
+    previousTenantAnnualConsumptionEur: toStringOrNull(
       form.previousTenantAnnualConsumptionEur,
     ),
     hasDoubleGlazedWindows: form.hasDoubleGlazedWindows,
-    meterPowerKva: Number(form.meterPowerKva),
+    meterPowerKva: toNumberOrUndefined(form.meterPowerKva),
     deliveryPointId: form.deliveryPointId,
     hasFiberOptic: form.hasFiberOptic,
     hasCopperNetwork: form.hasCopperNetwork,
@@ -150,9 +129,10 @@ const proSpaceEditConfig: ResourceEditConfig<ProSpaceDetailsAdmin, SpaceForm> =
     },
     api: {
       detailUrl: (id) => `/admin/pro-spaces/${id}`,
-      createUrl: "/admin/pro-spaces/create",
+      createUrl: "/admin/pro-spaces",
       mediaListUrl: (id) => `/admin/pro-spaces/${id}/media`,
       mediaThumbnailUrl: (id) => `/admin/media/pro-space/${id}/thumbnail`,
+      mediaPlanUrl: (id) => `/admin/media/pro-space/${id}/plan`,
       mediaBulkUrl: (id) => `/admin/media/pro-space/${id}`,
       mediaReorderUrl: (id) => `/admin/media/pro-space/${id}/reorder`,
     },
@@ -392,7 +372,7 @@ export default function ProSpacesPanel() {
                               : "badge badge-danger"
                           }
                         >
-                          {space.isAvailable ? "Disponible" : "Indisponible"}
+                          {space.isAvailable ? "Disponible" : "Occupé"}
                         </span>
                       </div>
                     </td>
@@ -477,7 +457,7 @@ export default function ProSpacesPanel() {
 
       <ConfirmModal
         isOpen={!!availabilityTarget}
-        title="Rendre l'espace pro indisponible"
+        title="Rendre l'espace pro occupé"
         message={`Voulez-vous également révoquer tous les accès existants pour "${availabilityTarget?.name}" ?`}
         confirmLabel="Révoquer les accès"
         denyLabel="Ne pas révoquer"

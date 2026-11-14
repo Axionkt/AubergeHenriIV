@@ -7,7 +7,7 @@ import { keys } from "../lib/query";
 import ConfirmModal from "../components/ConfirmModal";
 import type { UserApartment, UserProSpace } from "../types/userAccess";
 import styles from "./Profile.module.css";
-import { formatDateTime } from "../lib/time";
+import { formatDateTime } from "../lib/dataFormatting";
 import { getApiErrorMessage } from "../lib/apiError";
 import Input from "../components/form/Input";
 

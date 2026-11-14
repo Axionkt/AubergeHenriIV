@@ -1,13 +1,27 @@
 import { Link } from "react-router-dom";
 import styles from "./History.module.css";
+import rueBernadotte from "./assets/rue-bernadotte.webp";
 
 export default function History() {
   return (
     <section className={styles.history}>
       <div className={styles.historyInner}>
-        <p className="section-eyebrow">Archives de la ville</p>
-        <h2>Une adresse ancrée dans l'histoire de Pau</h2>
-        <p>
+        <p className="section-eyebrow light">Archives de la ville</p>
+        <h2 className="light">Une adresse ancrée dans l'histoire de Pau</h2>
+
+        <figure className={styles.figure}>
+          <img
+            src={rueBernadotte}
+            alt="Carte postale ancienne de la rue Bernadotte à Pau, animée de passants"
+            width={800}
+            height={503}
+            loading="lazy"
+            decoding="async"
+            className={styles.image}
+          />
+        </figure>
+
+        <p className={`${styles.summary} light`}>
           Le 23 rue Bernadotte, à deux pas de la maison natale de Jean-Baptiste
           Bernadotte, futur roi de Suède, est un témoin vivant de l'évolution de
           Pau depuis le Moyen Âge.
@@ -37,12 +51,11 @@ export default function History() {
           <br />
           Une adresse paisible, habitée par l'âme du passé, au cœur d'un
           quartier vivant et d'une ville résolument moderne et dynamique.
-          <Link
-            to="/histoire"
-            className="section-subtitle btn btn-ghost btn-sm"
-          >
+          <br />
+          <br />
+          <Link to="/histoire" className="link-arrow light">
             Envie d'en savoir plus ? Découvrez l'histoire complète en cliquant
-            ici →
+            ici
           </Link>
         </p>
       </div>

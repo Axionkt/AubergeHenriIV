@@ -13,11 +13,11 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      <Hero isAuth={isAuth} />
+      <Hero />
       <Story />
       <ResourceSection />
-      <History />
       <ReviewsSection />
+      <History />
       <CTA isAuth={isAuth} />
       <Footer />
     </div>

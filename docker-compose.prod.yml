@@ -1,40 +1,73 @@
+# Shared settings, merged into each service with <<: *defaults.
+x-defaults: &defaults
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: "json-file"
+    options:
+      # Log retention: 5 x 10 MB per container. Logs hold IPs and user ids
+      # (personal data under GDPR): keep this bounded and documented.
+      max-size: "10m"
+      max-file: "5"
+
 services:
   frontend:
+    <<: *defaults
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    restart: unless-stopped
     expose:
       - "80"
+    mem_limit: 128m
 
   backend:
+    <<: *defaults
     build:
       context: ./backend
       dockerfile: Dockerfile
-    restart: unless-stopped
+    # The app only writes to the storage volume; everything else is read-only.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    mem_limit: 512m
     volumes:
       - storage:/var/www/storage
     expose:
       - "3000"
     environment:
       - NODE_ENV=production
-      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_URL=${FRONTEND_URL:?FRONTEND_URL is required}
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=app_user
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_NAME=ah4_database
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - RESEND_API_KEY=${RESEND_API_KEY}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      - RESEND_API_KEY=${RESEND_API_KEY:?RESEND_API_KEY is required}
       - STORAGE_ROOT=/var/www/storage
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s # migrations run before the server listens
     depends_on:
       db:
         condition: service_healthy
 
   nginx:
-    image: nginx:alpine
-    restart: unless-stopped
+    <<: *defaults
+    image: nginx:1.28-alpine
+    mem_limit: 128m
     ports:
       - "80:80"
       - "443:443"
@@ -43,18 +76,24 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
       - storage:/var/www/storage:ro
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
 
   db:
+    <<: *defaults
+    # Keep the major version pinned: a new major needs a dump/restore.
     image: postgres:17
-    restart: unless-stopped
+    mem_limit: 512m
     environment:
       POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: ah4_database
     volumes:
-      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      # Bootstraps an empty volume only; later schema changes are applied
+      # by the backend's migration runner (backend/db/migrate.ts).
+      - ./backend/db/migrations/000_init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - pg_prod_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app_user -d ah4_database"]

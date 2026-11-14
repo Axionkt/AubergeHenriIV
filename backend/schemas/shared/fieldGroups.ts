@@ -3,6 +3,7 @@ import {
   decimalField,
   dpeRatingSchema,
   idWithSpaceField,
+  richTextField,
   textField,
 } from "./fields";
 
@@ -19,17 +20,18 @@ import {
 
 export const generalFields = {
   name: textField(1, 100),
-  description: textField(1, 5000),
+  description: richTextField(1, 5000),
 };
 
 export const characteristicsFields = {
   type: textField(1, 50),
-  sizeCarrezSqm: decimalField(0, 2000, 2),
-  sizeFloorSqm: decimalField(0, 2000, 2),
+  sizeCarrezSqm: decimalField(1, 2000, 2),
+  sizeFloorSqm: decimalField(1, 2000, 2),
   floor: textField(1, 50),
   orientation: textField(1, 50),
   view: textField(1, 100),
   hasPrivateExterior: z.boolean(),
+  hasPrivateParking: z.boolean(),
 };
 
 export const heatingAndHotWaterFields = {
@@ -39,13 +41,13 @@ export const heatingAndHotWaterFields = {
 };
 
 export const dpeFields = {
-  dpeEnergyRating: dpeRatingSchema,
-  dpeEnergyKwhPerSqmYear: decimalField(0, 9999.99, 2),
-  dpeEmissionsRating: dpeRatingSchema,
-  dpeEmissionsKgPerSqmYear: decimalField(0, 9999.99, 2),
-  previousTenantAnnualConsumptionEur: decimalField(0, 999_999.99, 2),
+  dpeEnergyRating: dpeRatingSchema.nullish(),
+  dpeEnergyKwhPerSqmYear: decimalField(1, 9999.99, 2).nullish(),
+  dpeEmissionsRating: dpeRatingSchema.nullish(),
+  dpeEmissionsKgPerSqmYear: decimalField(1, 9999.99, 2).nullish(),
+  previousTenantAnnualConsumptionEur: textField(1, 50).nullish(),
   hasDoubleGlazedWindows: z.boolean(),
-  meterPowerKva: decimalField(0, 250, 2),
+  meterPowerKva: decimalField(1, 250, 2),
   deliveryPointId: idWithSpaceField(100),
 };
 

@@ -1,12 +1,13 @@
 import Router from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
-import AdminHomeServices from "../../services/admin/AdminHomeServices";
+import AdminReviewService from "../../services/admin/AdminReviewService";
 import { registerIdParams } from "../../middleware/paramValidation";
 import {
   validateCreateReviewRequest,
   validateUpdateReviewRequest,
 } from "../../schemas/review";
 import { assertValid } from "../../utils/validation";
+import { audit } from "../../utils/audit";
 
 const router = Router();
 registerIdParams(router, ["id"]);
@@ -18,8 +19,13 @@ router.post(
       validateCreateReviewRequest(req.body),
     );
 
-    await AdminHomeServices.createReview({ authorName, text, createdAt });
-    res.sendStatus(201);
+    const ret = await AdminReviewService.createReview({
+      authorName,
+      text,
+      createdAt,
+    });
+    audit("review.create", { targetType: "review", targetIds: [ret.id] });
+    res.status(201).json(ret);
   }),
 );
 
@@ -30,15 +36,17 @@ router
       const id = Number(req.params.id);
       const updates = assertValid(validateUpdateReviewRequest(req.body));
 
-      await AdminHomeServices.updateReview(id, updates);
-      res.sendStatus(204);
+      const ret = await AdminReviewService.updateReview(id, updates);
+      audit("review.update", { targetType: "review", targetIds: [id] });
+      res.status(200).json(ret);
     }),
   )
   .delete(
     asyncHandler(async (req, res) => {
       const id = Number(req.params.id);
 
-      await AdminHomeServices.deleteReview(id);
+      await AdminReviewService.deleteReview(id);
+      audit("review.delete", { targetType: "review", targetIds: [id] });
       res.sendStatus(204);
     }),
   );

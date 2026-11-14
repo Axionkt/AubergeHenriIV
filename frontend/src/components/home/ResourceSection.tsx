@@ -8,17 +8,36 @@ import { useToast } from "../../context/ToastContext";
 import ConfirmModal from "../ConfirmModal";
 import { ApartmentItem } from "../../types/apartment";
 import { ProSpaceItem } from "../../types/proSpace";
-import { formatDateTime, formatShortDate } from "../../lib/time";
+import { formatDateTime, formatShortDate } from "../../lib/dataFormatting";
 import styles from "./ResourceSection.module.css";
 
-import img1 from "./assets/resource_lg.webp";
-import img2 from "./assets/resource_sm.webp";
+import aptSm from "./assets/apt_sm.webp";
+import aptLg from "./assets/apt_lg.webp";
+import proSm from "./assets/pro_sm.webp";
+import proLg from "./assets/pro_lg.webp";
 
 type ResourceItem = ApartmentItem | ProSpaceItem;
 type Tab = "appartements" | "espaces-pro";
 const VALID_TABS: Tab[] = ["appartements", "espaces-pro"];
 
 const CONTACT_EMAIL = "aubergeh4@gmail.com";
+
+type Visual = { src: string; alt: string; position?: string };
+
+const VISUALS: Record<Tab, { main: Visual; accent: Visual }> = {
+  appartements: {
+    main: { src: aptLg, alt: "Cheminée en briques et galets" },
+    accent: { src: aptSm, alt: "Salon en parquet à chevrons" },
+  },
+  "espaces-pro": {
+    main: {
+      src: proLg,
+      alt: "Façade de l'immeuble et sa porte d'entrée",
+      position: "85% center",
+    },
+    accent: { src: proSm, alt: "Bureaux avec cloisons vitrées" },
+  },
+};
 
 function isProSpace(item: ResourceItem): item is ProSpaceItem {
   return "sizeCarrezSqm" in item;
@@ -79,7 +98,7 @@ function ResourceCard({
             </span>
           ) : (
             <span className={`${styles.badge} ${styles.badgeUnavailable}`}>
-              Indisponible
+              Occupé
             </span>
           )}
           {item.hasAccess && (
@@ -106,6 +125,7 @@ function ResourceCard({
           className={`${styles.cardRight} ${styles.cardRightArrow}`}
           aria-label={`Voir les détails de ${item.name}`}
         >
+          <span className={styles.cardRightLabel}>Voir les détails</span>
           <span aria-hidden="true">→</span>
         </Link>
       )}
@@ -210,6 +230,7 @@ export default function ResourceSection() {
     activeTab === "espaces-pro" ? proSpacesLoading : apartmentsLoading;
   const isError =
     activeTab === "espaces-pro" ? proSpacesError : apartmentsError;
+  const visual = VISUALS[activeTab];
 
   return (
     <section id="collection" className={styles.resources}>
@@ -218,15 +239,17 @@ export default function ResourceSection() {
           <div className={styles.visual}>
             <div className={styles.visualMain}>
               <img
-                src={img1}
-                alt="Cheminée en briques et galets"
+                src={visual.main.src}
+                alt={visual.main.alt}
+                style={{ objectPosition: visual.main.position }}
                 loading="lazy"
               />
             </div>
             <div className={styles.visualAccent}>
               <img
-                src={img2}
-                alt="Salon en parquet à chevrons"
+                src={visual.accent.src}
+                alt={visual.accent.alt}
+                style={{ objectPosition: visual.accent.position }}
                 loading="lazy"
               />
             </div>

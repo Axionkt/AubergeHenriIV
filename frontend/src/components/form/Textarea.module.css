@@ -46,6 +46,13 @@
   color: var(--clr-danger);
 }
 
+/* ---------- Field wrapper (textarea + optional toolbar) ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
 .textarea {
   width: 100%;
   padding: var(--gap-sm) var(--gap-md);
@@ -114,4 +121,185 @@
   font-size: 0.8rem;
   color: var(--clr-danger);
   line-height: 1.4;
+}
+
+/* ---------- Attached toolbar mode ----------
+   The wrapper takes over the border, focus ring and error state so the
+   toolbar and textarea read as a single control. */
+
+.attached {
+  border: 1px solid var(--clr-linen);
+  border-radius: var(--radius-md);
+  background: var(--clr-white);
+  overflow: hidden;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+}
+
+.attached:hover:not(.isDisabled) {
+  border-color: var(--clr-sand);
+}
+
+.attached:focus-within {
+  border-color: var(--clr-lavender);
+  box-shadow: 0 0 0 3px var(--clr-focus-lavender);
+}
+
+.attached.hasError {
+  border-color: var(--clr-danger-border);
+  background: var(--clr-danger-lt);
+}
+
+.attached.hasError:hover:not(.isDisabled) {
+  border-color: var(--clr-danger);
+}
+
+.attached.hasError:focus-within {
+  border-color: var(--clr-danger);
+  box-shadow: 0 0 0 3px #9b23351a;
+}
+
+.attached.isDisabled {
+  background: var(--clr-parchment);
+  cursor: not-allowed;
+}
+
+/* Strip the textarea's own chrome inside the wrapper */
+.attached > .textarea,
+.attached > .textarea:hover:not(:disabled),
+.attached > .textarea:focus,
+.attached > .textarea:disabled,
+.attached > .textarea.error,
+.attached > .textarea.error:hover:not(:disabled),
+.attached > .textarea.error:focus {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+}
+
+/* ---------- Toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-xxs);
+  padding: var(--gap-xs) var(--gap-sm);
+  border-bottom: 1px solid var(--clr-linen);
+  background: var(--clr-parchment);
+}
+
+.attached.hasError .toolbar {
+  border-bottom-color: var(--clr-danger-border);
+  background: transparent;
+}
+
+.separator {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--gap-xxs) var(--gap-xs);
+  background: var(--clr-linen);
+}
+
+.toolBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--gap-lg);
+  height: var(--gap-lg);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--clr-earth);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.toolBtn:hover:not(:disabled) {
+  background: var(--clr-linen);
+  color: var(--clr-ink);
+}
+
+.toolBtn:focus-visible {
+  outline: var(--gap-xxs) solid var(--clr-lavender);
+  outline-offset: 1px;
+}
+
+.toolBtn:disabled {
+  color: var(--clr-sand);
+  cursor: not-allowed;
+}
+
+.glyphBold {
+  font-weight: 700;
+}
+
+.glyphItalic {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.glyphStrike {
+  text-decoration: line-through;
+}
+
+/* ---------- FormattedText (display) ---------- */
+
+:where(.formatted) {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--clr-ink);
+  overflow-wrap: anywhere;
+}
+
+.formatted > * {
+  margin: 0;
+}
+
+.formatted > * + * {
+  margin-top: 0.6em;
+}
+
+.formatted ul,
+.formatted ol {
+  padding-left: 1.4em;
+}
+
+.formatted li + li {
+  margin-top: 0.15em;
+}
+
+.formatted blockquote {
+  padding-left: var(--gap-md);
+  border-left: var(--gap-xxs) solid var(--clr-linen);
+  color: var(--clr-earth);
+}
+
+.formatted code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--clr-parchment);
+}
+
+.formatted a {
+  color: var(--clr-lavender);
+  text-decoration: underline;
+  text-underline-offset: var(--gap-xxs);
+}
+
+.formatted .spacer {
+  height: 1em;
 }

@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { toValidationOutcome, type ValidationOutcome } from "./fields";
+import type { MediaType } from "../../models/Media";
 
 // ---------------------------------------------------------------------------
 // Filename sanitization
@@ -12,7 +14,7 @@ import { toValidationOutcome, type ValidationOutcome } from "./fields";
  * entirely, not just filtering ".." patterns) and strips control
  * characters / null bytes.
  */
-export function sanitizeFileName(value: string): string {
+function sanitizeFileName(value: string): string {
   const withoutControlChars = value.replace(/[\u0000-\u001F\u007F]/g, "");
   const segments = withoutControlChars.split(/[/\\]/);
   const lastSegment = segments[segments.length - 1] ?? "";
@@ -60,53 +62,146 @@ const RESERVED_WINDOWS_NAMES = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
-// Mime type <-> extension registries. Thumbnails are always static images;
-// media can additionally be video. Kept as two separate maps (rather than
-// deriving one from the other) so each stays an explicit, readable list of
-// exactly what it accepts.
+// MIME type <-> extension registry. Supported formats are defined centrally
+// and grouped by their intended use:
+// - Thumbnails: static raster images only.
+// - Media: raster images and videos.
+// - Plans: PDF documents only.
 //
-// NOTE: only raster image + the two listed video containers are supported
-// here deliberately. If you ever add SVG, PDF, or other formats that can
-// embed active content (scripts, XML entities, etc.), those need their own
-// sanitization pass beyond what this file does — magic-byte checking alone
-// doesn't make an SVG safe to serve back to a browser.
+// Each validator derives its allowed MIME types and extensions from this
+// registry, keeping the accepted formats explicit and consistent.
+//
+// NOTE: PDF support is intentionally limited to plan uploads. Magic-byte
+// checking verifies the file format but does not guarantee that its contents
+// are safe. Formats that can contain active content (such as SVG or PDF)
+// require appropriate handling when served back to a browser. In particular,
+// consider serving documents with Content-Disposition: attachment and
+// X-Content-Type-Options: nosniff rather than rendering them inline.
 // ---------------------------------------------------------------------------
 
-const IMAGE_TYPE_EXTENSIONS: Record<string, readonly string[]> = {
-  "image/jpeg": ["jpg", "jpeg"],
-  "image/png": ["png"],
-  "image/webp": ["webp"],
-};
+const SUPPORTED_MIME_TYPES = {
+  "image/jpeg": {
+    type: "IMAGE",
+    extensions: ["jpg", "jpeg"],
+    thumbnail: true,
+    plan: true,
+    media: true,
+  },
+  "image/png": {
+    type: "IMAGE",
+    extensions: ["png"],
+    thumbnail: true,
+    plan: true,
+    media: true,
+  },
+  "image/webp": {
+    type: "IMAGE",
+    extensions: ["webp"],
+    thumbnail: true,
+    plan: true,
+    media: true,
+  },
+  "video/mp4": {
+    type: "VIDEO",
+    extensions: ["mp4"],
+    thumbnail: false,
+    plan: false,
+    media: true,
+  },
+  "video/webm": {
+    type: "VIDEO",
+    extensions: ["webm"],
+    thumbnail: false,
+    plan: false,
+    media: true,
+  },
+  "application/pdf": {
+    type: "DOCUMENT",
+    extensions: ["pdf"],
+    thumbnail: false,
+    plan: true,
+    media: false,
+  },
+} as const satisfies Record<
+  string,
+  {
+    type: MediaType;
+    extensions: readonly string[];
+    thumbnail: boolean;
+    plan: boolean;
+    media: boolean;
+  }
+>;
 
-const VIDEO_TYPE_EXTENSIONS: Record<string, readonly string[]> = {
-  "video/mp4": ["mp4"],
-  "video/webm": ["webm"],
-};
+type SupportedMimeType = keyof typeof SUPPORTED_MIME_TYPES;
 
-export const THUMBNAIL_TYPE_EXTENSIONS: Record<string, readonly string[]> = {
-  ...IMAGE_TYPE_EXTENSIONS,
-};
+export const MIME_TO_MEDIA_TYPE = Object.entries(SUPPORTED_MIME_TYPES).reduce(
+  (acc, [mime, config]) => {
+    acc[mime as SupportedMimeType] = config.type;
+    return acc;
+  },
+  {} as Record<SupportedMimeType, MediaType>,
+);
 
-export const MEDIA_TYPE_EXTENSIONS: Record<string, readonly string[]> = {
-  ...IMAGE_TYPE_EXTENSIONS,
-  ...VIDEO_TYPE_EXTENSIONS,
-};
+function isSupportedMimeType(mime: string): mime is SupportedMimeType {
+  return Object.prototype.hasOwnProperty.call(SUPPORTED_MIME_TYPES, mime);
+}
 
-export const THUMBNAIL_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
+// Thumbnail
+export const THUMBNAIL_TYPE_EXTENSIONS = Object.entries(
+  SUPPORTED_MIME_TYPES,
+).reduce(
+  (acc, [mime, config]) => {
+    if (config.thumbnail) {
+      acc[mime as SupportedMimeType] = config.extensions;
+    }
 
-export const MEDIA_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "video/mp4",
-  "video/webm",
-];
+    return acc;
+  },
+  {} as Partial<Record<SupportedMimeType, readonly string[]>>,
+);
+
+export const THUMBNAIL_MIME_TYPES = Object.entries(SUPPORTED_MIME_TYPES)
+  .filter(([, config]) => config.thumbnail)
+  .map(([mime]) => mime as SupportedMimeType);
 
 export const MAX_THUMBNAIL_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+// Plan
+export const PLAN_TYPE_EXTENSIONS = Object.entries(SUPPORTED_MIME_TYPES).reduce(
+  (acc, [mime, config]) => {
+    if (config.plan) {
+      acc[mime as SupportedMimeType] = config.extensions;
+    }
+
+    return acc;
+  },
+  {} as Partial<Record<SupportedMimeType, readonly string[]>>,
+);
+
+export const PLAN_MIME_TYPES = Object.entries(SUPPORTED_MIME_TYPES)
+  .filter(([, config]) => config.plan)
+  .map(([mime]) => mime as SupportedMimeType);
+
+export const MAX_PLAN_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+
+// Regular
+export const MEDIA_TYPE_EXTENSIONS = Object.entries(
+  SUPPORTED_MIME_TYPES,
+).reduce(
+  (acc, [mime, config]) => {
+    if (config.media) {
+      acc[mime as SupportedMimeType] = config.extensions;
+    }
+    return acc;
+  },
+  {} as Partial<Record<SupportedMimeType, readonly string[]>>,
+);
+
+export const MEDIA_MIME_TYPES = Object.entries(SUPPORTED_MIME_TYPES)
+  .filter(([, config]) => config.media)
+  .map(([mime]) => mime as SupportedMimeType);
+
 export const MAX_MEDIA_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 export const MAX_MEDIA_AT_ONCE = 20;
 
@@ -159,7 +254,7 @@ const multerFileShape = {
   mimetype: z.string(),
   // buffer present with memoryStorage; path/destination/filename present
   // with diskStorage — only one set will actually be populated depending on
-  // your Multer storage engine config.
+  // config.
   size: z.number().min(1, "Le fichier est vide."),
   buffer: z.instanceof(Buffer).optional(),
   path: z.string().optional(),
@@ -177,8 +272,8 @@ const multerFileShape = {
 // ---------------------------------------------------------------------------
 
 export function fileField(options: {
-  allowedMimeTypes: readonly string[];
-  extensionsByMimeType?: Record<string, readonly string[]>;
+  allowedMimeTypes: readonly SupportedMimeType[];
+  extensionsByMimeType?: Partial<Record<SupportedMimeType, readonly string[]>>;
   maxSizeBytes: number;
 }) {
   const {
@@ -190,9 +285,15 @@ export function fileField(options: {
   return z
     .object({
       ...multerFileShape,
-      mimetype: z.string().refine((value) => allowedMimeTypes.includes(value), {
-        message: `Le type de fichier doit être l'un des suivants : ${allowedMimeTypes.join(", ")}`,
-      }),
+      mimetype: z
+        .string()
+        .refine(
+          (value) =>
+            isSupportedMimeType(value) && allowedMimeTypes.includes(value),
+          {
+            message: `Le type de fichier doit être l'un des suivants : ${allowedMimeTypes.join(", ")}`,
+          },
+        ),
       size: multerFileShape.size.max(
         maxSizeBytes,
         `Le fichier ne doit pas dépasser ${Math.floor(maxSizeBytes / (1024 * 1024))} Mo.`,
@@ -205,6 +306,15 @@ export function fileField(options: {
         ctx.addIssue({
           code: "custom",
           message: "Impossible de déterminer le type réel du fichier.",
+          path: ["mimetype"],
+        });
+        return;
+      }
+
+      if (!isSupportedMimeType(detected.mime)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Le contenu du fichier ne correspond pas à un type autorisé (détecté : ${detected.mime}).`,
           path: ["mimetype"],
         });
         return;
@@ -229,6 +339,7 @@ export function fileField(options: {
 
       const allowedExts = extensionsByMimeType[detected.mime] ?? [];
       const ext = getFileExtension(file.originalname);
+
       if (!allowedExts.includes(ext)) {
         ctx.addIssue({
           code: "custom",
@@ -237,7 +348,11 @@ export function fileField(options: {
           path: ["originalname"],
         });
       }
-    });
+    })
+    .transform((file) => ({
+      ...file,
+      type: MIME_TO_MEDIA_TYPE[file.mimetype as SupportedMimeType],
+    }));
 }
 
 /**
@@ -250,8 +365,8 @@ export function fileField(options: {
 export type ValidatedUploadFile = z.infer<ReturnType<typeof fileField>>;
 
 export function fileArrayField(options: {
-  allowedMimeTypes: readonly string[];
-  extensionsByMimeType?: Record<string, readonly string[]>;
+  allowedMimeTypes: readonly SupportedMimeType[];
+  extensionsByMimeType?: Partial<Record<SupportedMimeType, readonly string[]>>;
   maxSizeBytes: number;
   maxCount?: number;
   maxTotalSizeBytes?: number;
@@ -296,8 +411,6 @@ export async function validateFile<T>(
 // as a display label in your DB.
 // ---------------------------------------------------------------------------
 
-export function buildSafeStorageFilename(
-  validatedFile: ValidatedUploadFile,
-): string {
-  return `${crypto.randomUUID()}.${getFileExtension(validatedFile.originalname)}`;
+export function buildSafeStorageFilename(file: ValidatedUploadFile): string {
+  return randomUUID() + "." + getFileExtension(file.originalname);
 }

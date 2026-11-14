@@ -31,7 +31,7 @@ export default function Story() {
             <br />
             Au cœur de l'immeuble, une petite cour arborée offre à ses habitants
             une parenthèse végétale en plein centre-ville, avec ses palmiers,
-            son olivier, ses lauriers roses et son jasmin.
+            son olivier, son érable du Japon, ses lauriers roses et son jasmin.
             <br />
             <br />
             Dès que l'on pousse la grande porte d'entrée en bois massif,

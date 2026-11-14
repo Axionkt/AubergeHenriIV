@@ -1,4 +1,4 @@
-import { AdminMediaItem, MediaItem } from "./media";
+import { AdminMediaItem, MediaItem, PlanType } from "./media";
 
 export interface ApartmentBase {
   id: string;
@@ -14,29 +14,30 @@ export interface ApartmentBase {
   sizeFloorSqm: number;
   floor: string;
   orientation: string;
-  view?: string;
+  view: string;
   hasPrivateExterior: boolean;
+  hasPrivateParking: boolean;
 
   // Heating & Hot Water
-  electricHeatingModel?: string;
-  bathroomTowelHeaterModel?: string;
-  electricWaterHeaterModel?: string;
+  electricHeatingModel: string;
+  bathroomTowelHeaterModel: string;
+  electricWaterHeaterModel: string;
 
   // Kitchen
-  inductionCooktopModel?: string;
-  ovenModel?: string;
-  rangeHoodModel?: string;
-  kitchenCabinetsModel?: string;
+  inductionCooktopModel: string;
+  ovenModel: string;
+  rangeHoodModel: string;
+  kitchenCabinetsModel: string;
 
   // Energy Performance (DPE)
-  dpeEnergyRating?: string;
-  dpeEnergyKwhPerSqmYear?: number;
-  dpeEmissionsRating?: string;
-  dpeEmissionsKgPerSqmYear?: number;
-  previousTenantAnnualConsumptionEur?: number;
+  dpeEnergyRating: string | null;
+  dpeEnergyKwhPerSqmYear: number | null;
+  dpeEmissionsRating: string | null;
+  dpeEmissionsKgPerSqmYear: number | null;
+  previousTenantAnnualConsumptionEur: string | null;
   hasDoubleGlazedWindows: boolean;
-  meterPowerKva?: number;
-  deliveryPointId?: string;
+  meterPowerKva: number;
+  deliveryPointId: string;
 
   // Connectivity
   hasFiberOptic: boolean;
@@ -44,8 +45,8 @@ export interface ApartmentBase {
   hasTvOutlet: boolean;
 
   // Land Registry
-  landRegistryRefPre2025?: string;
-  landRegistryRefPost2025?: string;
+  landRegistryRefPre2025: string;
+  landRegistryRefPost2025: string;
 }
 
 export interface ApartmentBaseAdmin extends ApartmentBase {
@@ -55,6 +56,8 @@ export interface ApartmentBaseAdmin extends ApartmentBase {
 
 export interface ApartmentDisplay {
   thumbnailUrl: string | null;
+  planType: PlanType | null;
+  planUrl: string | null;
   photoCount: number;
   videoCount: number;
 }
@@ -65,7 +68,7 @@ export interface ApartmentItem extends ApartmentDisplay {
   type: string;
   floor: string;
   orientation: string;
-  view?: string;
+  view: string;
   isAvailable: boolean;
   hasAccess: boolean;
   accessExpiry: string | null;

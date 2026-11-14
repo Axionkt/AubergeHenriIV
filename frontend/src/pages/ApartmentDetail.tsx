@@ -6,8 +6,10 @@ import styles from "./ApartmentDetail.module.css";
 import MediaBanner from "../components/MediaBanner";
 import { MediaItem } from "../types/media";
 import { ApartmentDetails } from "../types/apartment";
-import { formatDateTime } from "../lib/time";
+import { formatDateTime, formatInt, noData } from "../lib/dataFormatting";
 import { useAccessTokenKeepAlive } from "../hooks/useAccessTokenKeepAlive";
+import { FormattedText } from "../components/form/Textarea";
+import PlanCard from "../components/PlanCard";
 
 export default function ApartmentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -36,10 +38,10 @@ export default function ApartmentDetail() {
   });
 
   const { data: commonSpaceMediaData } = useQuery<{ media: MediaItem[] }>({
-    queryKey: keys.commonSpaces(),
+    queryKey: [...keys.commonSpaces(), "apartment"],
     queryFn: () =>
       api
-        .get<{ media: MediaItem[] }>("/common-spaces/media")
+        .get<{ media: MediaItem[] }>("/apartments/common-space/media")
         .then((r) => r.data),
     enabled: !!apt,
   });
@@ -210,192 +212,189 @@ export default function ApartmentDetail() {
               </span>
             </h1>
 
-            {apt.description && (
-              <div className={`card ${styles.descCard}`}>
-                <h4>À propos de cet appartement</h4>
-                <p className={styles.desc}>{apt.description}</p>
-              </div>
-            )}
+            <div className={`card ${styles.descCard}`}>
+              <h4>À propos de cet appartement</h4>
+              <FormattedText value={apt.description} />
+            </div>
 
             <div className={`card ${styles.detailsCard}`}>
               <h4>Caractéristiques</h4>
               <div className={styles.detailsGrid}>
-                {apt.type && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Type</span>
-                    <span className={styles.dVal}>{apt.type}</span>
-                  </div>
-                )}
-                {apt.floor && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Étage</span>
-                    <span className={styles.dVal}>{apt.floor}</span>
-                  </div>
-                )}
-                {apt.sizeCarrezSqm != null && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Surface Carrez</span>
-                    <span className={styles.dVal}>{apt.sizeCarrezSqm} m²</span>
-                  </div>
-                )}
-                {apt.sizeFloorSqm != null && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Surface au sol</span>
-                    <span className={styles.dVal}>{apt.sizeFloorSqm} m²</span>
-                  </div>
-                )}
-                {apt.orientation && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Orientation</span>
-                    <span className={styles.dVal}>{apt.orientation}</span>
-                  </div>
-                )}
-                {apt.view && (
-                  <div className={styles.detailItem}>
-                    <span className={styles.dLabel}>Vue</span>
-                    <span className={styles.dVal}>{apt.view}</span>
-                  </div>
-                )}
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Type</span>
+                  <span className={styles.dVal}>{apt.type}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Étage</span>
+                  <span className={styles.dVal}>{apt.floor}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Surface Carrez</span>
+                  <span className={styles.dVal}>
+                    {formatInt(apt.sizeCarrezSqm)} m²
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Surface au sol</span>
+                  <span className={styles.dVal}>
+                    {formatInt(apt.sizeFloorSqm)} m²
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Orientation</span>
+                  <span className={styles.dVal}>{apt.orientation}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Vue</span>
+                  <span className={styles.dVal}>{apt.view}</span>
+                </div>
                 <div className={styles.detailItem}>
                   <span className={styles.dLabel}>Extérieur privé</span>
                   <span className={styles.dVal}>
                     {apt.hasPrivateExterior ? "Oui" : "Non"}
                   </span>
                 </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Parking privé</span>
+                  <span className={styles.dVal}>
+                    {apt.hasPrivateParking ? "Oui" : "Non"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {(apt.electricHeatingModel ||
-              apt.bathroomTowelHeaterModel ||
-              apt.electricWaterHeaterModel) && (
-              <div className={`card ${styles.detailsCard}`}>
-                <h4>Chauffage & Eau chaude</h4>
-                <div className={styles.detailsGrid}>
-                  {apt.electricHeatingModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>
-                        Chauffage électrique
-                      </span>
-                      <span className={styles.dVal}>
-                        {apt.electricHeatingModel}
-                      </span>
-                    </div>
-                  )}
-                  {apt.bathroomTowelHeaterModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Sèche-serviette</span>
-                      <span className={styles.dVal}>
-                        {apt.bathroomTowelHeaterModel}
-                      </span>
-                    </div>
-                  )}
-                  {apt.electricWaterHeaterModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Chauffe-eau</span>
-                      <span className={styles.dVal}>
-                        {apt.electricWaterHeaterModel}
-                      </span>
-                    </div>
-                  )}
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Informations</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Point de livraison</span>
+                  <span className={styles.dVal}>{apt.deliveryPointId}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>
+                    Réf. cadastrale (avant 2025)
+                  </span>
+                  <span className={styles.dVal}>
+                    {apt.landRegistryRefPre2025}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>
+                    Réf. cadastrale (après 2025)
+                  </span>
+                  <span className={styles.dVal}>
+                    {apt.landRegistryRefPost2025}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {(apt.inductionCooktopModel ||
-              apt.ovenModel ||
-              apt.rangeHoodModel ||
-              apt.kitchenCabinetsModel) && (
-              <div className={`card ${styles.detailsCard}`}>
-                <h4>Cuisine</h4>
-                <div className={styles.detailsGrid}>
-                  {apt.inductionCooktopModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Plaque à induction</span>
-                      <span className={styles.dVal}>
-                        {apt.inductionCooktopModel}
-                      </span>
-                    </div>
-                  )}
-                  {apt.ovenModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Four</span>
-                      <span className={styles.dVal}>{apt.ovenModel}</span>
-                    </div>
-                  )}
-                  {apt.rangeHoodModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Hotte</span>
-                      <span className={styles.dVal}>{apt.rangeHoodModel}</span>
-                    </div>
-                  )}
-                  {apt.kitchenCabinetsModel && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Meubles de cuisine</span>
-                      <span className={styles.dVal}>
-                        {apt.kitchenCabinetsModel}
-                      </span>
-                    </div>
-                  )}
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Chauffage & Eau chaude</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Chauffage</span>
+                  <span className={styles.dVal}>
+                    {apt.electricHeatingModel}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Sèche-serviette</span>
+                  <span className={styles.dVal}>
+                    {apt.bathroomTowelHeaterModel}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Chauffe-eau</span>
+                  <span className={styles.dVal}>
+                    {apt.electricWaterHeaterModel}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {(apt.dpeEnergyRating ||
-              apt.dpeEmissionsRating ||
-              apt.dpeEnergyKwhPerSqmYear != null ||
-              apt.dpeEmissionsKgPerSqmYear != null) && (
-              <div className={`card ${styles.detailsCard}`}>
-                <h4>Performance énergétique (DPE)</h4>
-                <div className={styles.detailsGrid}>
-                  {apt.dpeEnergyRating && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Classe énergie</span>
-                      <span className={styles.dVal}>{apt.dpeEnergyRating}</span>
-                    </div>
-                  )}
-                  {apt.dpeEnergyKwhPerSqmYear != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Consommation</span>
-                      <span className={styles.dVal}>
-                        {apt.dpeEnergyKwhPerSqmYear} kWh/m²/an
-                      </span>
-                    </div>
-                  )}
-                  {apt.dpeEmissionsRating && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Classe émissions</span>
-                      <span className={styles.dVal}>
-                        {apt.dpeEmissionsRating}
-                      </span>
-                    </div>
-                  )}
-                  {apt.dpeEmissionsKgPerSqmYear != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Émissions GES</span>
-                      <span className={styles.dVal}>
-                        {apt.dpeEmissionsKgPerSqmYear} kg/m²/an
-                      </span>
-                    </div>
-                  )}
-                  {apt.hasDoubleGlazedWindows != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Double vitrage</span>
-                      <span className={styles.dVal}>
-                        {apt.hasDoubleGlazedWindows ? "Oui" : "Non"}
-                      </span>
-                    </div>
-                  )}
-                  {apt.meterPowerKva != null && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.dLabel}>Puissance compteur</span>
-                      <span className={styles.dVal}>
-                        {apt.meterPowerKva} kVA
-                      </span>
-                    </div>
-                  )}
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Cuisine</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Plaque à induction</span>
+                  <span className={styles.dVal}>
+                    {apt.inductionCooktopModel}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Four</span>
+                  <span className={styles.dVal}>{apt.ovenModel}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Hotte</span>
+                  <span className={styles.dVal}>{apt.rangeHoodModel}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Meubles de cuisine</span>
+                  <span className={styles.dVal}>
+                    {apt.kitchenCabinetsModel}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
+
+            <div className={`card ${styles.detailsCard}`}>
+              <h4>Performance énergétique (DPE)</h4>
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Classe énergie</span>
+                  <span className={styles.dVal}>
+                    {apt.dpeEnergyRating ?? noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Consommation</span>
+                  <span className={styles.dVal}>
+                    {apt.dpeEnergyKwhPerSqmYear != null
+                      ? `${apt.dpeEnergyKwhPerSqmYear} kWh/m²/an`
+                      : noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Classe émissions</span>
+                  <span className={styles.dVal}>
+                    {apt.dpeEmissionsRating ?? noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Émissions GES</span>
+                  <span className={styles.dVal}>
+                    {apt.dpeEmissionsKgPerSqmYear != null
+                      ? `${apt.dpeEmissionsKgPerSqmYear} kg/m²/an`
+                      : noData}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Double vitrage</span>
+                  <span className={styles.dVal}>
+                    {apt.hasDoubleGlazedWindows ? "Oui" : "Non"}
+                  </span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>Puissance compteur</span>
+                  <span className={styles.dVal}>{apt.meterPowerKva} kVA</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.dLabel}>
+                    Conso. locataire préc. (€/an)
+                    <em className={styles.dNote}>
+                      (basées sur le dernier résident, non contractuelles)
+                    </em>
+                  </span>
+                  <span className={styles.dVal}>
+                    {apt.previousTenantAnnualConsumptionEur != null
+                      ? `${apt.previousTenantAnnualConsumptionEur} €`
+                      : noData}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             <div className={`card ${styles.detailsCard}`}>
               <h4>Connectivité</h4>
@@ -460,13 +459,45 @@ export default function ApartmentDetail() {
                 </span>
               </div>
             </div>
+
+            <PlanCard
+              url={apt.planUrl}
+              type={apt.planType}
+              className={styles.accessCard}
+            />
           </aside>
         </div>
 
         <h2>Espaces communs</h2>
+        <p className="section-subtitle">Charme, convivialité et sérénité</p>
         <p className={styles.desc}>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua.
+          Dès que l'on pousse la grande porte d'entrée en bois massif de
+          l'Auberge Henri IV, on découvre une atmosphère chaleureuse et
+          accueillante, avec cette agréable impression d'être déjà chez soi.
+          <br />
+          L'escalier d'époque, soigneusement entretenu et ciré, est l'une des
+          pièces maîtresses de l'immeuble. Situé dans un secteur patrimonial
+          protégé, il fait l'objet de prescriptions de conservation destinées à
+          préserver son caractère historique. Des petits anges apportent une
+          touche de poésie et de douceur à la montée des étages. Depuis le hall
+          d'entrée, les résidents accèdent à la cour arborée. Véritable
+          parenthèse de verdure et de fraîcheur en plein centre-ville, celle-ci
+          invite à s'installer pour lire, prendre un café ou simplement profiter
+          d'un moment de détente, à l'écart de l'animation urbaine.
+          <br />
+          <br />
+          Un interphone permettant de contrôler l'accès à l'immeuble, et une
+          caméra de surveillance installée dans le hall d'entrée, assurent le
+          confort et la tranquillité des résidents.
+          <br />
+          <br />
+          Un local à vélos sécurisé est également mis à la disposition des
+          résidents.
+          <br />
+          <br />
+          Comme les appartements, les espaces communs font l'objet d'un
+          entretien attentif et régulier, afin de préserver durablement le
+          charme des lieux et le plaisir d'y vivre.
         </p>
       </div>
 

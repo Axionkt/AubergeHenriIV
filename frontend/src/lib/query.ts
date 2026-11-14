@@ -37,4 +37,5 @@ export const keys = {
   proSpaceMediaAdmin: (id: string) =>
     ["proSpaces", id, "media", "admin"] as const,
   commonSpaces: () => ["commonSpaces"] as const,
+  commonSpacesAdmin: () => ["commonSpaces", "admin"] as const,
 } as const;
