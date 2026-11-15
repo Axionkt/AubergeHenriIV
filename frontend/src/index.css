@@ -503,10 +503,27 @@ span {
 }
 
 /* ── Tables ── */
+/* Wrap every .data-table in .table-scroll: cells never wrap, so once
+   each column is at its natural width the wrapper scrolls horizontally.
+   (A <table> can't scroll itself — overflow must live on a wrapper.) */
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+}
+.data-table th,
+.data-table td {
+  white-space: nowrap;
+}
+/* Opt-out for free-text columns (descriptions, notes…) */
+.data-table .cell-wrap {
+  white-space: normal;
+  min-width: 16rem;
 }
 .data-table th {
   padding: var(--gap-sm) var(--gap-md);
