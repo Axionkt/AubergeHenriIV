@@ -384,12 +384,12 @@ export default function ApartmentDetail() {
                   <span className={styles.dLabel}>
                     Conso. locataire préc. (€/an)
                     <em className={styles.dNote}>
-                      (basées sur le dernier résident, non contractuelles)
+                      (basée sur le dernier résident, non contractuelle)
                     </em>
                   </span>
                   <span className={styles.dVal}>
                     {apt.previousTenantAnnualConsumptionEur != null
-                      ? `${apt.previousTenantAnnualConsumptionEur} €`
+                      ? apt.previousTenantAnnualConsumptionEur
                       : noData}
                   </span>
                 </div>

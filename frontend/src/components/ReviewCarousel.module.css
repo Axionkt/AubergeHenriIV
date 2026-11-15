@@ -9,16 +9,26 @@
 .track {
   display: flex;
   height: 100%;
-  will-change: transform;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.track::-webkit-scrollbar {
+  display: none;
 }
 
 .slot {
+  height: 100%;
   min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   box-sizing: border-box;
   padding: 0 calc(var(--gap-lg) / 2);
 }
 
-/* Used for the static/no-cycle 2-card and jump-fade cases (parent is 100% wide). */
+/* Static no-cycle layout (all reviews fit in one view) and the skeleton. */
 .pairJump {
   display: flex;
   height: 100%;
@@ -39,36 +49,6 @@
   box-sizing: border-box;
   padding: var(--gap-lg);
   overflow: hidden;
-}
-
-@keyframes slideFromRight {
-  from {
-    transform: translateX(48px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideFromLeft {
-  from {
-    transform: translateX(-48px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.fromRight {
-  animation: slideFromRight 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.fromLeft {
-  animation: slideFromLeft 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .empty {

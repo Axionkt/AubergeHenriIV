@@ -1,10 +1,9 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import styles from "./ReviewCarousel.module.css";
 import { Review } from "../types/review";
 import { FormattedText } from "./form/Textarea";
 
 const AUTOPLAY_MS = 10000;
-const SLIDE_MS = 420;
 const MOBILE_BREAKPOINT = 750;
 
 function mod(i: number, n: number) {
@@ -58,67 +57,143 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
   const n = reviews.length;
   const isMobile = useIsMobile();
   const itemsPerView = isMobile ? 1 : 2;
-  const slots = itemsPerView + 2; // buffer-before + N visible + buffer-after
-  const step = 100 / slots; // % of TRACK width per slide-step
-  const canCycle = n > itemsPerView; // sliding window only makes sense with more reviews than fit in one view
+  const k = itemsPerView; // clones on each side of the real slides
+  const canCycle = n > itemsPerView; // scrolling only makes sense with more reviews than fit in one view
 
-  const [startIndex, setStartIndex] = useState(0);
-  const [sliding, setSliding] = useState<"idle" | "forward" | "backward">(
-    "idle",
-  );
-  const [jumpKey, setJumpKey] = useState(0);
-  const [jumpDir, setJumpDir] = useState<"forward" | "backward">("forward");
+  const [index, setIndex] = useState(0); // logical index of the first visible review
 
-  const animatingRef = useRef(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const indexRef = useRef(index);
+  indexRef.current = index;
+  const touchingRef = useRef(false);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoplayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const goNext = useCallback(() => {
-    if (animatingRef.current || !canCycle) return;
-    animatingRef.current = true;
-    setSliding("forward");
-  }, [canCycle]);
+  const slotWidth = () => {
+    const track = trackRef.current;
+    return track ? track.clientWidth / itemsPerView : 0;
+  };
 
-  const goPrev = useCallback(() => {
-    if (animatingRef.current || !canCycle) return;
-    animatingRef.current = true;
-    setSliding("backward");
-  }, [canCycle]);
+  const currentSlot = () => {
+    const track = trackRef.current;
+    const w = slotWidth();
+    return track && w ? Math.round(track.scrollLeft / w) : indexRef.current + k;
+  };
 
-  const jumpTo = useCallback(
-    (target: number) => {
-      if (animatingRef.current || target === startIndex) return;
+  const scrollToSlot = (p: number, smooth: boolean) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({
+      left: p * slotWidth(),
+      behavior: smooth ? "smooth" : "auto",
+    });
+  };
 
-      if (canCycle) {
-        const fwd = mod(target - startIndex, n);
-        const bwd = mod(startIndex - target, n);
-        if (fwd === 1) return goNext();
-        if (bwd === 1) return goPrev();
-        setJumpDir(fwd <= bwd ? "forward" : "backward");
-      }
+  const clearAutoplay = () => {
+    if (autoplayRef.current) clearTimeout(autoplayRef.current);
+    autoplayRef.current = null;
+  };
 
-      setStartIndex(target);
-      setJumpKey((k) => k + 1);
-    },
-    [startIndex, n, canCycle, goNext, goPrev],
-  );
+  // Restart the full countdown so the user always gets AUTOPLAY_MS on whatever they land on.
+  const scheduleAutoplay = () => {
+    clearAutoplay();
+    if (!canCycle || touchingRef.current) return;
+    autoplayRef.current = setTimeout(() => goNextRef.current(), AUTOPLAY_MS);
+  };
 
-  // Autoplay
+  // Once scrolling settles: if we landed on a clone, jump instantly to the identical real slide.
+  const normalize = () => {
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = null;
+    if (!canCycle || touchingRef.current) return;
+    const p = currentSlot();
+    if (p < k) scrollToSlot(p + n, false);
+    else if (p >= n + k) scrollToSlot(p - n, false);
+    scheduleAutoplay();
+  };
+
+  const goBy = (delta: number) => {
+    if (!canCycle) return;
+    scrollToSlot(currentSlot() + delta, true);
+    scheduleAutoplay();
+  };
+  const goNext = () => goBy(1);
+  const goPrev = () => goBy(-1);
+
+  const goNextRef = useRef(goNext);
+  goNextRef.current = goNext;
+  const normalizeRef = useRef(normalize);
+  normalizeRef.current = normalize;
+
+  const jumpTo = (target: number) => {
+    if (!canCycle) return;
+    if (target !== index) scrollToSlot(target + k, true);
+    scheduleAutoplay();
+  };
+
+  function handleScroll() {
+    const track = trackRef.current;
+    const w = slotWidth();
+    if (!track || !w) return;
+    const p = Math.round(track.scrollLeft / w);
+    setIndex(mod(p - k, n));
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    if (!touchingRef.current) {
+      settleTimerRef.current = setTimeout(() => normalizeRef.current(), 120);
+    }
+  }
+
+  function handleTouchStart() {
+    touchingRef.current = true;
+    clearAutoplay();
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+  }
+
+  function handleTouchEnd() {
+    touchingRef.current = false;
+    // Covers a release with no momentum (no further scroll events) on browsers without `scrollend`.
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = setTimeout(() => normalizeRef.current(), 120);
+  }
+
+  // Land on the right slot before first paint and whenever the layout (or clone count) changes.
+  useLayoutEffect(() => {
+    if (!canCycle) return;
+    scrollToSlot(mod(indexRef.current, n) + k, false);
+  }, [canCycle, itemsPerView, n]);
+
+  // Keep alignment on resize, and normalize promptly where `scrollend` is supported.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !canCycle) return;
+    const onScrollEnd = () => normalizeRef.current();
+    track.addEventListener("scrollend", onScrollEnd);
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => {
+        track.scrollTo({
+          left: (indexRef.current + k) * (track.clientWidth / k),
+          behavior: "auto",
+        });
+      });
+      observer.observe(track);
+    }
+    return () => {
+      track.removeEventListener("scrollend", onScrollEnd);
+      observer?.disconnect();
+    };
+  }, [canCycle, k]);
+
+  // Autoplay: one-shot timer, restarted after every settled scroll.
   useEffect(() => {
     if (!canCycle) return;
-    intervalRef.current = setInterval(goNext, AUTOPLAY_MS);
+    scheduleAutoplay();
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      clearAutoplay();
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
-  }, [canCycle, goNext]);
-
-  const handleTrackTransitionEnd = (e: React.TransitionEvent) => {
-    if (e.propertyName !== "transform" || sliding === "idle") return;
-    setStartIndex((prev) =>
-      sliding === "forward" ? mod(prev + 1, n) : mod(prev - 1, n),
-    );
-    setSliding("idle");
-    animatingRef.current = false;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCycle]);
 
   if (n === 0) {
     return <p className={styles.empty}>No reviews yet.</p>;
@@ -132,66 +207,59 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     );
   }
 
-  // `slots` slots: [buffer-before, ...N visible, buffer-after]
-  const slotIndices = canCycle
-    ? Array.from({ length: slots }, (_, i) => mod(startIndex - 1 + i, n))
-    : [];
-
-  const trackWidthPercent = (slots / itemsPerView) * 100;
-
-  let trackTransform = `translateX(-${step}%)`; // baseline: shows slots [1..itemsPerView]
-  let withTransition = false;
-  if (sliding === "forward") {
-    trackTransform = `translateX(-${step * 2}%)`;
-    withTransition = true;
-  } else if (sliding === "backward") {
-    trackTransform = "translateX(0%)";
-    withTransition = true;
-  }
-
   const visibleSet = canCycle
-    ? new Set(
-        Array.from({ length: itemsPerView }, (_, k) => mod(startIndex + k, n)),
-      )
+    ? new Set(Array.from({ length: itemsPerView }, (_, j) => mod(index + j, n)))
     : null;
+
+  // Physical slides: [last k (clones), all n, first k (clones)]
+  const slides = canCycle
+    ? [
+        ...Array.from({ length: k }, (_, j) => ({
+          key: `pre-${j}`,
+          idx: mod(n - k + j, n),
+        })),
+        ...reviews.map((_, i) => ({ key: `${i}`, idx: i })),
+        ...Array.from({ length: k }, (_, j) => ({
+          key: `post-${j}`,
+          idx: j,
+        })),
+      ]
+    : [];
+  const firstVisibleSlot = index + k;
 
   return (
     <>
       <div className={styles.viewport}>
         {canCycle ? (
           <div
+            ref={trackRef}
             className={styles.track}
-            style={{
-              width: `${trackWidthPercent}%`,
-              transform: trackTransform,
-              transition: withTransition
-                ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
-                : "none",
-            }}
-            onTransitionEnd={handleTrackTransitionEnd}
+            onScroll={handleScroll}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            role="group"
+            aria-roledescription="carousel"
+            aria-label="Reviews"
           >
-            {slotIndices.map((idx, slot) => (
+            {slides.map(({ key, idx }, p) => (
               <div
                 className={styles.slot}
-                key={`${slot}-${idx}`}
-                style={{ flex: `0 0 ${step}%` }}
+                key={key}
+                style={{ flex: `0 0 ${100 / itemsPerView}%` }}
+                aria-hidden={
+                  p < firstVisibleSlot || p >= firstVisibleSlot + itemsPerView
+                }
               >
                 <ReviewCard review={reviews[idx]} />
               </div>
             ))}
           </div>
         ) : (
-          <div
-            key={jumpKey}
-            className={`${styles.pairJump} ${
-              jumpDir === "forward" ? styles.fromRight : styles.fromLeft
-            }`}
-          >
-            {Array.from({ length: itemsPerView }, (_, k) =>
-              mod(startIndex + k, n),
-            ).map((idx, k) => (
-              <div className={styles.pairSlot} key={k}>
-                <ReviewCard review={reviews[idx]} />
+          <div className={styles.pairJump}>
+            {reviews.map((review, i) => (
+              <div className={styles.pairSlot} key={i}>
+                <ReviewCard review={review} />
               </div>
             ))}
           </div>
@@ -203,7 +271,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
           className="control-btn"
           onClick={goPrev}
           aria-label="Previous review"
-          disabled={!canCycle || sliding !== "idle"}
+          disabled={!canCycle}
         >
           <svg
             viewBox="0 0 24 24"
@@ -237,7 +305,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
           className="control-btn"
           onClick={goNext}
           aria-label="Next review"
-          disabled={!canCycle || sliding !== "idle"}
+          disabled={!canCycle}
         >
           <svg
             viewBox="0 0 24 24"
