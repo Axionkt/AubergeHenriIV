@@ -51,12 +51,11 @@ export default function Admin() {
           ))}
         </nav>
         <div className={styles.sidebarFooter}>
-          <Link
-            to="/"
-            className="btn btn-ghost btn-sm"
-            style={{ width: "100%", justifyContent: "center" }}
-          >
-            ← Site public
+          <Link to="/" className={styles.backLink}>
+            <span className={styles.backArrow} aria-hidden="true">
+              ←
+            </span>
+            Site public
           </Link>
         </div>
       </aside>

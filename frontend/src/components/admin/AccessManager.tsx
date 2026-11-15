@@ -447,7 +447,7 @@ export default function AccessManager({
         </p>
       )}
 
-      <div className="card" style={{ overflow: "hidden" }}>
+      <div className="card table-scroll">
         <table className="data-table">
           <thead>
             <tr>

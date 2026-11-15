@@ -575,7 +575,12 @@
 }
 .reviewFormGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  /* Up to 3 columns, but a field never gets narrower than 240px —
+     the date field drops below the author one instead of wrapping. */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(240px, calc((100% - 2 * var(--gap-md)) / 3)), 1fr)
+  );
   gap: var(--gap-md);
   margin-bottom: var(--gap-md);
 }
@@ -638,8 +643,5 @@
   }
   .accessGrid {
     grid-template-columns: 1fr;
-  }
-  .reviewFormGrid {
-    grid-template-columns: 1fr 1fr;
   }
 }

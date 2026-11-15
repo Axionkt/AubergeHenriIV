@@ -403,11 +403,23 @@ span {
   width: 16px;
   height: 16px;
 }
-.control-btn:hover:not(:disabled) {
-  background: var(--ctrl-active);
-  border-color: var(--ctrl-active);
-  color: var(--ctrl-on-accent);
-  transform: scale(1.08);
+/* Hover only on devices that truly hover; touch browsers otherwise keep it "stuck" after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .control-btn:hover:not(:disabled) {
+    background: var(--ctrl-active);
+    border-color: var(--ctrl-active);
+    color: var(--ctrl-on-accent);
+    transform: scale(1.08);
+  }
+}
+/* Touch: show the same color only while pressed, then fade back out (base transition). */
+@media (hover: none), (pointer: coarse) {
+  .control-btn:active:not(:disabled) {
+    background: var(--ctrl-active);
+    border-color: var(--ctrl-active);
+    color: var(--ctrl-on-accent);
+    transition: none;
+  }
 }
 .control-btn:active:not(:disabled) {
   transform: scale(0.96);
@@ -442,8 +454,15 @@ span {
     background 0.22s ease,
     opacity 0.22s ease;
 }
-.pip:hover:not(.pip-active) {
-  background: var(--ctrl-hover);
+@media (hover: hover) and (pointer: fine) {
+  .pip:hover:not(.pip-active) {
+    background: var(--ctrl-hover);
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .pip:active:not(.pip-active) {
+    background: var(--ctrl-hover);
+  }
 }
 .pip-active {
   width: 20px;
@@ -484,10 +503,27 @@ span {
 }
 
 /* ── Tables ── */
+/* Wrap every .data-table in .table-scroll: cells never wrap, so once
+   each column is at its natural width the wrapper scrolls horizontally.
+   (A <table> can't scroll itself — overflow must live on a wrapper.) */
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+}
+.data-table th,
+.data-table td {
+  white-space: nowrap;
+}
+/* Opt-out for free-text columns (descriptions, notes…) */
+.data-table .cell-wrap {
+  white-space: normal;
+  min-width: 16rem;
 }
 .data-table th {
   padding: var(--gap-sm) var(--gap-md);
