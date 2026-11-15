@@ -51,6 +51,54 @@
   overflow: hidden;
 }
 
+/* Controls: pinned to the container width so the buttons never get pushed off-screen. */
+.controls {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.controls > :global(.control-btn) {
+  flex-shrink: 0;
+}
+
+/* Clipped viewport onto the pip strip; sized to exactly --pip-count pips. */
+.pipWindow {
+  --pip-w: 6px; /* keep in sync with .pip / .pip-active in index.css */
+  --pip-active-extra: 14px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: var(--gap-xs) 0;
+  width: calc(
+    var(--pip-count) * var(--pip-w) + (var(--pip-count) - 1) * var(--gap-sm) +
+      var(--pip-active-count) * var(--pip-active-extra)
+  );
+  transition: width 0.3s ease;
+}
+
+.pipStrip {
+  justify-content: flex-start;
+  width: max-content;
+  transform: translateX(
+    calc(var(--pip-offset) * -1 * (var(--pip-w) + var(--gap-sm)))
+  );
+  transition: transform 0.3s ease;
+}
+
+.pipStrip > :global(.pip) {
+  transition:
+    width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.22s ease,
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+/* Outermost pip when more are hidden beyond it. */
+.pipEdge {
+  transform: scale(0.6);
+  opacity: 0.7;
+}
+
 .empty {
   text-align: center;
   color: var(--clr-sand);

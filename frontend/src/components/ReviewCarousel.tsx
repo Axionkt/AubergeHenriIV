@@ -1,10 +1,19 @@
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  type CSSProperties,
+} from "react";
 import styles from "./ReviewCarousel.module.css";
 import { Review } from "../types/review";
 import { FormattedText } from "./form/Textarea";
 
 const AUTOPLAY_MS = 10000;
 const MOBILE_BREAKPOINT = 750;
+// Must match `.pip` / `.pip-active` widths in index.css.
+const PIP_W = 6;
+const PIP_ACTIVE_W = 20;
 
 function mod(i: number, n: number) {
   return ((i % n) + n) % n;
@@ -68,6 +77,10 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
   const touchingRef = useRef(false);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoplayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const pipWindowRef = useRef<HTMLDivElement>(null);
+  const pipStripRef = useRef<HTMLDivElement>(null);
+  const [maxPips, setMaxPips] = useState(Infinity); // how many pips fit between the buttons
 
   const slotWidth = () => {
     const track = trackRef.current;
@@ -195,6 +208,33 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canCycle]);
 
+  // Measure how many pips fit between the prev/next buttons (with `itemsPerView` of them active/wide).
+  useLayoutEffect(() => {
+    const controls = controlsRef.current;
+    const pipWindow = pipWindowRef.current;
+    const strip = pipStripRef.current;
+    if (!controls || !pipWindow || !strip) return;
+    const measure = () => {
+      const ctrlGap = parseFloat(getComputedStyle(controls).columnGap) || 0;
+      const pipGap = parseFloat(getComputedStyle(strip).columnGap) || 0;
+      let others = 0;
+      for (const el of Array.from(controls.children)) {
+        if (el !== pipWindow) others += (el as HTMLElement).offsetWidth + ctrlGap;
+      }
+      const avail = controls.clientWidth - others;
+      const fit = Math.floor(
+        (avail + pipGap - itemsPerView * (PIP_ACTIVE_W - PIP_W)) /
+          (PIP_W + pipGap),
+      );
+      setMaxPips(Math.max(fit, itemsPerView));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(controls);
+    return () => observer.disconnect();
+  }, [itemsPerView, n]);
+
   if (n === 0) {
     return <p className={styles.empty}>No reviews yet.</p>;
   }
@@ -226,6 +266,30 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
       ]
     : [];
   const firstVisibleSlot = index + k;
+
+  // Pip window: when not every pip fits, show a sliding subset that keeps the active pip(s)
+  // centered, clamping at either end so the active pip(s) then move toward the edge instead.
+  let windowSize = n;
+  let windowStart = 0;
+  if (canCycle && maxPips < n) {
+    windowSize = maxPips;
+    // Same parity as itemsPerView so the active pip(s) sit exactly in the middle.
+    if ((windowSize - itemsPerView) % 2 !== 0) windowSize -= 1;
+    windowSize = Math.max(windowSize, itemsPerView);
+    const centered = index - (windowSize - itemsPerView) / 2;
+    windowStart = Math.min(Math.max(centered, 0), n - windowSize);
+  }
+  const windowEnd = windowStart + windowSize;
+  const inWindow = (i: number) => i >= windowStart && i < windowEnd;
+  const isActive = (i: number) =>
+    inWindow(i) && (canCycle ? visibleSet!.has(i) : true);
+  let activeInWindow = 0;
+  for (let i = windowStart; i < windowEnd; i++) if (isActive(i)) activeInWindow++;
+  const pipWindowStyle = {
+    "--pip-count": windowSize,
+    "--pip-active-count": activeInWindow,
+    "--pip-offset": windowStart,
+  } as CSSProperties;
 
   return (
     <>
@@ -266,7 +330,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
         )}
       </div>
 
-      <div className="controls">
+      <div className={`controls ${styles.controls}`} ref={controlsRef}>
         <button
           className="control-btn"
           onClick={goPrev}
@@ -285,20 +349,38 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
           </svg>
         </button>
 
-        <div className="pips" role="tablist" aria-label="Reviews navigation">
-          {reviews.map((_, i) => {
-            const isVisible = canCycle ? visibleSet!.has(i) : true;
-            return (
-              <button
-                key={i}
-                role="tab"
-                aria-selected={isVisible}
-                aria-label={`Review ${i + 1} of ${n}`}
-                className={`pip ${isVisible ? "pip-active" : ""}`}
-                onClick={() => jumpTo(i)}
-              />
-            );
-          })}
+        <div
+          className={styles.pipWindow}
+          ref={pipWindowRef}
+          style={pipWindowStyle}
+        >
+          <div
+            className={`pips ${styles.pipStrip}`}
+            ref={pipStripRef}
+            role="tablist"
+            aria-label="Reviews navigation"
+          >
+            {reviews.map((_, i) => {
+              const active = isActive(i);
+              const visible = canCycle ? visibleSet!.has(i) : true;
+              // Shrink the outermost pip when more pips are hidden beyond it.
+              const isEdge =
+                !active &&
+                ((i === windowStart && windowStart > 0) ||
+                  (i === windowEnd - 1 && windowEnd < n));
+              return (
+                <button
+                  key={i}
+                  role="tab"
+                  aria-selected={visible}
+                  aria-label={`Review ${i + 1} of ${n}`}
+                  tabIndex={inWindow(i) ? 0 : -1}
+                  className={`pip ${active ? "pip-active" : ""} ${isEdge ? styles.pipEdge : ""}`}
+                  onClick={() => jumpTo(i)}
+                />
+              );
+            })}
+          </div>
         </div>
 
         <button
@@ -378,7 +460,7 @@ export function ReviewCarouselSkeleton() {
         </div>
       </div>
 
-      <div className={styles.controls}>
+      <div className={`controls ${styles.controls}`}>
         <div
           className="skeleton"
           style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }}
