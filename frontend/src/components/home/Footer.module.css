@@ -93,6 +93,13 @@
   font-size: 0.75rem;
   color: var(--clr-on-dark-25);
 }
+.footerCopy a {
+  color: var(--clr-on-dark-45);
+  transition: color var(--transition);
+}
+.footerCopy a:hover {
+  color: var(--clr-on-dark-80);
+}
 
 /* Tablet / mobile: stack, centered, tighter */
 @media (max-width: 899px) {

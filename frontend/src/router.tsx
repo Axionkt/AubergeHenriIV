@@ -16,6 +16,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import { ProtectedRoute, AdminRoute } from "./components/RouteGuards";
 import Archive from "./pages/Archive";
+import Legal from "./pages/Legal";
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       { path: "/mot-de-passe-oublie", element: <ForgotPassword /> },
       { path: "/reinitialisation-mot-de-passe", element: <ResetPassword /> },
       { path: "/histoire", element: <Archive /> },
+      { path: "/confidentialite", element: <Legal /> },
 
       // Authenticated
       {

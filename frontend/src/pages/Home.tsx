@@ -5,7 +5,6 @@ import ResourceSection from "../components/home/ResourceSection";
 import History from "../components/home/History";
 import ReviewsSection from "../components/home/ReviewsSection";
 import CTA from "../components/home/CTA";
-import Footer from "../components/home/Footer";
 import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
@@ -19,7 +18,6 @@ export default function Home() {
       <ReviewsSection />
       <History />
       <CTA isAuth={isAuth} />
-      <Footer />
     </div>
   );
 }
