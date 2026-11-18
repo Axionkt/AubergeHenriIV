@@ -74,7 +74,10 @@ export default function Register() {
       navigate("/", { replace: true });
     } catch (err: unknown) {
       setError(
-        getApiErrorMessage(err, "Inscription Google échouée. Veuillez réessayer."),
+        getApiErrorMessage(
+          err,
+          "Inscription Google échouée. Veuillez réessayer.",
+        ),
       );
     } finally {
       setGLoading(false);
@@ -100,7 +103,6 @@ export default function Register() {
           </p>
 
           <GoogleAuthButton
-
             text="signup_with"
 
             loading={gLoading}
@@ -110,7 +112,6 @@ export default function Register() {
             onCredential={handleGoogle}
 
             onError={handleGoogleError}
-
           />
 
           <div className="divider-ornament" style={{ margin: "20px 0" }}>
@@ -187,6 +188,11 @@ export default function Register() {
               {loading ? "Création…" : "Créer mon compte"}
             </button>
           </form>
+
+          <p className={styles.privacyNote}>
+            Vos données servent uniquement à gérer votre compte. Voir notre{" "}
+            <Link to="/confidentialite">politique de confidentialité</Link>.
+          </p>
 
           <p className={styles.footer}>
             Déjà un compte ? <Link to="/connexion">Se connecter</Link>

@@ -1,4 +1,4 @@
-import { Outlet, ScrollRestoration } from "react-router-dom";
+import { Outlet, ScrollRestoration, useLocation } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { GoogleOAuthProvider } from "@react-oauth/google";
@@ -6,11 +6,15 @@ import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { queryClient } from "./lib/query";
 import Navbar from "./components/Navbar";
+import Footer from "./components/home/Footer";
 
 const GOOGLE_CLIENT_ID =
   "346477495379-2l0haf1o560rs6ll7r785m5g1ll96248.apps.googleusercontent.com";
 
 export default function App() {
+  // The legal notice must be reachable from every public page.
+  const isAdmin = useLocation().pathname.startsWith("/admin");
+
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <QueryClientProvider client={queryClient}>
@@ -20,6 +24,7 @@ export default function App() {
           <ToastProvider>
             <Outlet />
           </ToastProvider>
+          {!isAdmin && <Footer />}
         </AuthProvider>
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>

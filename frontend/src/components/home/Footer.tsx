@@ -38,7 +38,8 @@ export default function Footer() {
       </div>
 
       <p className={styles.footerCopy}>
-        © {new Date().getFullYear()} Auberge Henri IV · Pau, France
+        © {new Date().getFullYear()} Auberge Henri IV · Pau, France ·{" "}
+        <Link to="/confidentialite">Mentions légales et confidentialité</Link>
       </p>
     </footer>
   );

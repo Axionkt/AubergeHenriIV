@@ -131,6 +131,18 @@
   gap: var(--gap-sm);
 }
 
+.privacyNote {
+  margin: var(--gap-md) 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--clr-warm);
+}
+.privacyNote a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .footer {
   margin-top: var(--gap-lg);
   text-align: center;
