@@ -97,15 +97,22 @@ export const loginLimiter = rateLimit({
     "Trop de tentatives de connexion, veuillez réessayer dans 30 minutes.",
   ),
 });
-export const oauthLimiter = rateLimit({
+// The Google callback is a page navigation, not an API call: when blocked,
+// send the user back to the login page with a message instead of JSON.
+export const googleCallbackLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 15,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
-  handler: rateLimited(
-    "Trop de tentatives d'authentification, veuillez réessayer dans un moment.",
-  ),
+  handler: (_req: Request, res: Response) => {
+    logSecurityEvent("rate_limit_exceeded", {
+      operation: "rateLimit",
+      status: 429,
+    });
+    res.set("Cache-Control", "no-store");
+    res.redirect(303, "/connexion?erreur=rate_limited");
+  },
 });
 export const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

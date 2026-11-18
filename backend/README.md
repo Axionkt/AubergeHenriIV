@@ -97,7 +97,11 @@ Only the hash is stored, so a read-only database leak yields no working links. T
 
 ### Google sign-in
 
-The frontend sends the ID token (a JWT) from Google's sign-in button. `google-auth-library` verifies its signature against Google's keys, and checks its audience against `GOOGLE_CLIENT_ID` and its expiry. The backend also requires `email_verified`. The profile names go through the same Zod rules as typed names, with fallbacks.
+Authorization code flow with PKCE, so the site loads nothing from Google until the user clicks the button (no IP or cookie reaches Google before that).
+
+1. The button links to `GET /auth/google/start?intent=login|register`. It generates a random `state`, PKCE verifier and `nonce`, stores them in a signed 10-minute cookie (`googleOAuth`, httpOnly, `SameSite=Lax` so it survives the top-level redirect back from Google, scoped to `/api/auth/google`), and redirects to Google with only the `openid email profile` scopes.
+2. Google redirects to `GET /auth/google/callback`. The `state` must match the cookie, which is then cleared. The code is exchanged with the PKCE verifier and `GOOGLE_CLIENT_SECRET`, and `google-auth-library` verifies the ID token's signature, audience (`GOOGLE_CLIENT_ID`), expiry and `nonce`. The backend also requires `email_verified`. The profile names go through the same Zod rules as typed names, with fallbacks.
+3. On success it sets the session cookies and redirects into the app (an optional `returnTo` must be an in-app path). On failure it redirects to `/connexion` or `/inscription` with a short `?erreur=` code, never a raw message. The callback is rate limited, and a blocked attempt also redirects rather than returning JSON.
 
 ### Anti-enumeration
 
@@ -235,7 +239,8 @@ All routes are served under `/api`.
 | POST | `/forgot-password` | Same answer whether or not the account exists; includes a honeypot field |
 | POST | `/reset-password` | Single use; revokes all existing sessions |
 | POST | `/login` | Sets session cookies |
-| POST | `/google/register`, `/google/login` | Google ID token in `googleToken` |
+| GET | `/google/start` | `?intent=login\|register`, optional `returnTo`; redirects to Google |
+| GET | `/google/callback` | Google's redirect target; signs in and redirects into the app |
 | POST | `/refresh` | Issues a new token pair if `token_version` still matches |
 | POST | `/logout` | Clears cookies |
 | GET | `/me` | Current user |
@@ -278,7 +283,7 @@ The backend normally runs inside the dev compose stack (see the root README), wh
 
 ## Tests
 
-Integration tests (`tests/`, Vitest + supertest) drive the real Express app against a real PostgreSQL 17. The schema is built by the migration runner from an empty database, the way a new deployment gets it. Only the edges are faked: Resend (emails are recorded, and tests read tokens out of the link like a user would) and Google ID token verification.
+Integration tests (`tests/`, Vitest + supertest) drive the real Express app against a real PostgreSQL 17. The schema is built by the migration runner from an empty database, the way a new deployment gets it. Only the edges are faked: Resend (emails are recorded, and tests read tokens out of the link like a user would) and the Google code exchange.
 
 ```bash
 docker run -d --rm --name auberge-test-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=auberge_test -p 5433:5432 postgres:17

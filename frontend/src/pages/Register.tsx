@@ -1,16 +1,17 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import { useAuth } from "../context/AuthContext";
 import styles from "./Auth.module.css";
 import { getApiErrorMessage } from "../lib/apiError";
 import Input from "../components/form/Input";
 import { RULES } from "../lib/password";
+import { googleErrorMessage } from "../lib/googleAuth";
 import StrengthBar from "../components/form/StrengthBar";
 import RuleList from "../components/form/RuleList";
 
 export default function Register() {
-  const { register, registerWithGoogle } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -21,9 +22,21 @@ export default function Register() {
     confirm: "",
   });
   const [passwordTouched, setPasswordTouched] = useState(false);
-  const [error, setError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [error, setError] = useState(() =>
+    googleErrorMessage(searchParams.get("erreur")),
+  );
+
+  // The Google error was read into state above: drop it from the URL so a
+  // refresh doesn't show it again.
+  useEffect(() => {
+    if (!searchParams.has("erreur")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("erreur");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [loading, setLoading] = useState(false);
-  const [gLoading, setGLoading] = useState(false);
 
   const allRulesPassed = useMemo(
     () => RULES.every((r) => r.test(form.password)),
@@ -66,28 +79,6 @@ export default function Register() {
     }
   }
 
-  async function handleGoogle(idToken: string) {
-    setGLoading(true);
-    setError("");
-    try {
-      await registerWithGoogle(idToken);
-      navigate("/", { replace: true });
-    } catch (err: unknown) {
-      setError(
-        getApiErrorMessage(
-          err,
-          "Inscription Google échouée. Veuillez réessayer.",
-        ),
-      );
-    } finally {
-      setGLoading(false);
-    }
-  }
-
-  function handleGoogleError() {
-    setError("Inscription Google annulée ou échouée.");
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.panel}>
@@ -102,17 +93,7 @@ export default function Register() {
             Accédez à nos appartements en exclusivité
           </p>
 
-          <GoogleAuthButton
-            text="signup_with"
-
-            loading={gLoading}
-
-            loadingLabel="Inscription…"
-
-            onCredential={handleGoogle}
-
-            onError={handleGoogleError}
-          />
+          <GoogleAuthButton intent="register" />
 
           <div className="divider-ornament" style={{ margin: "20px 0" }}>
             ou
@@ -183,7 +164,7 @@ export default function Register() {
               type="submit"
               className="btn btn-primary"
               style={{ width: "100%", marginTop: 4 }}
-              disabled={loading || gLoading || !allRulesPassed || !form.confirm}
+              disabled={loading || !allRulesPassed || !form.confirm}
             >
               {loading ? "Création…" : "Créer mon compte"}
             </button>

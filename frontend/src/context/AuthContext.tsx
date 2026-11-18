@@ -19,14 +19,12 @@ interface AuthContextValue {
   isAuth: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<User>;
-  loginWithGoogle: (googleToken: string) => Promise<User>;
   register: (
     email: string,
     password: string,
     firstName: string,
     lastName: string,
   ) => Promise<void>;
-  registerWithGoogle: (googleToken: string) => Promise<User>;
   logout: () => void;
 }
 
@@ -90,30 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const loginWithGoogle = useCallback(
-    async (googleToken: string): Promise<User> => {
-      const res = await api.post<User>("/auth/google/login", { googleToken });
-      qc.invalidateQueries({ queryKey: keys.apartments() });
-      qc.invalidateQueries({ queryKey: keys.proSpaces() });
-      setUser(res.data);
-      return res.data;
-    },
-    [],
-  );
-
-  const registerWithGoogle = useCallback(
-    async (googleToken: string): Promise<User> => {
-      const res = await api.post<User>("/auth/google/register", {
-        googleToken,
-      });
-      qc.invalidateQueries({ queryKey: keys.apartments() });
-      qc.invalidateQueries({ queryKey: keys.proSpaces() });
-      setUser(res.data);
-      return res.data;
-    },
-    [],
-  );
-
   const logout = useCallback(() => {
     api.post("/auth/logout").finally(() => {
       setUser(null);
@@ -129,9 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuth: !!user,
         isAdmin: user?.isAdmin || false,
         login,
-        loginWithGoogle,
         register,
-        registerWithGoogle,
         logout,
       }}
     >

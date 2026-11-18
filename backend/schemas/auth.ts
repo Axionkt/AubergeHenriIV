@@ -173,24 +173,6 @@ export function validateLoginRequest(
 }
 
 // ---------------------------------------------------------------------------
-// POST /google/register and POST /google/login — same body shape.
-// ---------------------------------------------------------------------------
-
-export const googleAuthRequestSchema = z
-  .object({
-    googleToken: tokenField(4096), // Google ID tokens (JWTs) can be sizable
-  })
-  .strict();
-
-export type GoogleAuthRequest = z.infer<typeof googleAuthRequestSchema>;
-
-export function validateGoogleAuthRequest(
-  body: unknown,
-): ValidationOutcome<GoogleAuthRequest> {
-  return toValidationOutcome(googleAuthRequestSchema.safeParse(body));
-}
-
-// ---------------------------------------------------------------------------
 // Google profile: names come from Google, so they go through the same
 // validation as typed names, with fallbacks when missing or invalid.
 // ---------------------------------------------------------------------------

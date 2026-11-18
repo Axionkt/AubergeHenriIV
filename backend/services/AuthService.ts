@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { OAuth2Client } from "google-auth-library";
+import { CodeChallengeMethod, OAuth2Client } from "google-auth-library";
 import { config } from "../config";
 import pool from "../db";
 import {
@@ -31,7 +31,14 @@ const DUMMY_PASSWORD_HASH =
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
 
-const googleClient = new OAuth2Client(config.GOOGLE_CLIENT_ID);
+/** Where Google sends the user back; must be listed in the Google console. */
+const GOOGLE_REDIRECT_URI = `${config.FRONTEND_URL.replace(/\/+$/, "")}/api/auth/google/callback`;
+
+const googleClient = new OAuth2Client(
+  config.GOOGLE_CLIENT_ID,
+  config.GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI,
+);
 
 export interface Session {
   user: UserDTO;
@@ -92,21 +99,70 @@ export default class AuthService {
     );
   }
 
-  /** Verifies a Google ID token (not an access token) issued to this app. */
-  public static async getGoogleProfile(idToken: string): Promise<GoogleProfile> {
+  /**
+   * Google's sign-in page for this attempt (authorization code flow with
+   * PKCE). Only the basic openid/email/profile scopes are requested.
+   */
+  public static googleAuthUrl(attempt: {
+    state: string;
+    verifier: string;
+    nonce: string;
+  }): string {
+    const challenge = crypto
+      .createHash("sha256")
+      .update(attempt.verifier)
+      .digest("base64url");
+    return googleClient.generateAuthUrl({
+      scope: ["openid", "email", "profile"],
+      state: attempt.state,
+      nonce: attempt.nonce,
+      code_challenge: challenge,
+      code_challenge_method: CodeChallengeMethod.S256,
+      prompt: "select_account",
+    });
+  }
+
+  /**
+   * Exchanges the authorization code from Google's redirect for the user's
+   * verified profile. The code is single-use and bound to this attempt's
+   * PKCE verifier; the ID token must carry this attempt's nonce.
+   */
+  public static async exchangeGoogleCode(
+    code: string,
+    verifier: string,
+    nonce: string,
+  ): Promise<GoogleProfile> {
     let payload;
+    let stage = "code_exchange";
     try {
+      const { tokens } = await googleClient.getToken({
+        code,
+        codeVerifier: verifier,
+      });
+      stage = "id_token";
+      if (!tokens.id_token) throw new Error("No ID token");
       const ticket = await googleClient.verifyIdToken({
-        idToken,
+        idToken: tokens.id_token,
         audience: config.GOOGLE_CLIENT_ID,
       });
       payload = ticket.getPayload();
-    } catch {
-      throw new UnauthorizedError("Token Google invalide.");
+    } catch (err) {
+      // Never log the error itself: Google client errors carry the request
+      // (code, verifier, client secret) and ID token errors the user's
+      // profile. Google's OAuth error code (e.g. invalid_grant) is enough to
+      // spot a misconfigured secret or redirect URI.
+      const oauthError = (err as { response?: { data?: { error?: unknown } } })
+        ?.response?.data?.error;
+      logSecurityEvent("google_sign_in_failed", {
+        operation: "auth.googleCallback",
+        reason:
+          typeof oauthError === "string" ? `${stage}:${oauthError}` : stage,
+      });
+      throw new UnauthorizedError("Connexion Google invalide.");
     }
 
-    if (!payload?.email) {
-      throw new UnauthorizedError("Token Google invalide.");
+    if (!payload?.email || payload.nonce !== nonce) {
+      throw new UnauthorizedError("Connexion Google invalide.");
     }
     if (!payload.email_verified) {
       throw new ForbiddenError(

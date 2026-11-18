@@ -8,6 +8,7 @@ import {
   PASSWORD,
   createUser,
   getCookie,
+  googleSignIn,
   lastEmailedToken,
   uniqueEmail,
 } from "./helpers";
@@ -125,10 +126,8 @@ describe("login", () => {
 
   it("tells Google-only accounts to use the Google button", async () => {
     const email = uniqueEmail();
-    const google = await request(app)
-      .post("/auth/google/register")
-      .send({ googleToken: `google:${email}` });
-    expect(google.status).toBe(201);
+    const { callback } = await googleSignIn(app, "register", email);
+    expect(getCookie(callback, "accessToken")).toBeDefined();
 
     const res = await login(email, "Any-Password-1");
 
@@ -293,5 +292,138 @@ describe("anti-enumeration", () => {
     }
     const recipients = vi.mocked(sendEmail).mock.calls.map(([m]) => m.to);
     expect(recipients).toEqual([unverified.email]);
+  });
+});
+
+describe("Google sign-in (redirect flow)", () => {
+  it("sends the user to Google with state, nonce and a PKCE challenge", async () => {
+    const { start, googleUrl } = await googleSignIn(app, "login", uniqueEmail());
+
+    expect(start.status).toBe(303);
+    expect(googleUrl.origin).toBe("https://accounts.google.com");
+    const params = googleUrl.searchParams;
+    expect(params.get("client_id")).toBe("test-google-client-id");
+    expect(params.get("redirect_uri")).toBe(
+      "http://localhost:5173/api/auth/google/callback",
+    );
+    expect(params.get("scope")).toBe("openid email profile");
+    expect(params.get("code_challenge_method")).toBe("S256");
+    expect(params.get("state")).toBeTruthy();
+    expect(params.get("nonce")).toBeTruthy();
+
+    const cookie = (start.headers["set-cookie"] as unknown as string[]).find(
+      (c) => c.startsWith("googleOAuth="),
+    );
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Lax/);
+    expect(cookie).toMatch(/Path=\/api\/auth\/google/);
+  });
+
+  it("registers a new Google user and signs them in", async () => {
+    const email = uniqueEmail();
+
+    const { callback } = await googleSignIn(app, "register", email);
+
+    expect(callback.status).toBe(303);
+    expect(callback.headers.location).toBe("/");
+    expect(getCookie(callback, "accessToken")).toBeDefined();
+    expect(getCookie(callback, "refreshToken")).toBeDefined();
+    const { rows } = await pool.query(
+      "SELECT is_google_auth, email_verified FROM Users WHERE email = $1",
+      [email],
+    );
+    expect(rows[0]).toEqual({ is_google_auth: true, email_verified: true });
+  });
+
+  it("logs an existing Google user in and honours a safe returnTo", async () => {
+    const email = uniqueEmail();
+    await googleSignIn(app, "register", email);
+
+    const { callback } = await googleSignIn(app, "login", email, {
+      returnTo: "/profil",
+    });
+
+    expect(callback.headers.location).toBe("/profil");
+    expect(getCookie(callback, "accessToken")).toBeDefined();
+  });
+
+  it("ignores a returnTo pointing to another site", async () => {
+    const email = uniqueEmail();
+    await googleSignIn(app, "register", email);
+
+    const { callback } = await googleSignIn(app, "login", email, {
+      returnTo: "//evil.example.com",
+    });
+
+    expect(callback.headers.location).toBe("/");
+  });
+
+  it("rejects a callback whose state doesn't match the cookie", async () => {
+    const { callback } = await googleSignIn(app, "login", uniqueEmail(), {
+      state: "forged",
+    });
+
+    expect(callback.headers.location).toBe("/connexion?erreur=expired");
+    expect(getCookie(callback, "accessToken")).toBeUndefined();
+  });
+
+  it("rejects a callback without the attempt cookie", async () => {
+    const { callback } = await googleSignIn(app, "login", uniqueEmail(), {
+      withCookie: false,
+    });
+
+    expect(callback.headers.location).toBe("/connexion?erreur=expired");
+    expect(getCookie(callback, "accessToken")).toBeUndefined();
+  });
+
+  it("refuses to log in a Google account that doesn't exist", async () => {
+    const { callback } = await googleSignIn(app, "login", uniqueEmail());
+
+    expect(callback.headers.location).toBe("/connexion?erreur=not_found");
+    expect(getCookie(callback, "accessToken")).toBeUndefined();
+  });
+
+  it("refuses to log in a password account through Google", async () => {
+    const user = await createUser();
+
+    const { callback } = await googleSignIn(app, "login", user.email);
+
+    expect(callback.headers.location).toBe("/connexion?erreur=not_found");
+  });
+
+  it("refuses to register an email that already has an account", async () => {
+    const user = await createUser();
+
+    const { callback } = await googleSignIn(app, "register", user.email);
+
+    expect(callback.headers.location).toBe("/inscription?erreur=exists");
+    expect(getCookie(callback, "accessToken")).toBeUndefined();
+  });
+
+  it("sends the user back when they cancel on Google's page", async () => {
+    const start = await request(app).get("/auth/google/start?intent=register");
+    const cookie = getCookie(start, "googleOAuth");
+    const state = new URL(start.headers.location).searchParams.get("state");
+
+    const res = await request(app)
+      .get(`/auth/google/callback?error=access_denied&state=${state}`)
+      .set("Cookie", `googleOAuth=${cookie}`);
+
+    expect(res.headers.location).toBe("/inscription?erreur=cancelled");
+  });
+
+  it("redirects with no-store once the callback is rate limited", async () => {
+    // Own IP, so the other tests' callbacks don't count toward the limit.
+    const callback = () =>
+      request(app)
+        .get("/auth/google/callback?state=x&code=y")
+        .set("X-Forwarded-For", "203.0.113.77");
+    for (let i = 0; i < 15; i++) await callback();
+
+    const res = await callback();
+
+    expect(res.status).toBe(303);
+    expect(res.headers.location).toBe("/connexion?erreur=rate_limited");
+    expect(res.headers["cache-control"]).toBe("no-store");
   });
 });
