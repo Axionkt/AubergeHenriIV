@@ -6,7 +6,7 @@ import {
   browseLimiter,
   forgotPasswordLimiter,
   loginLimiter,
-  oauthLimiter,
+  googleCallbackLimiter,
   refreshLimiter,
   registerLimiter,
   resendVerificationLimiter,
@@ -22,10 +22,21 @@ import {
   validateForgotPasswordRequest,
   validateResetPasswordRequest,
   validateLoginRequest,
-  validateGoogleAuthRequest,
 } from "../schemas/auth";
 import { assertValid } from "../utils/validation";
 import { clearAuthCookies, setAuthCookies } from "../utils/authCookies";
+import {
+  clearGoogleOAuthCookie,
+  randomToken,
+  readGoogleOAuthCookie,
+  safeReturnTo,
+  sameToken,
+  setGoogleOAuthCookie,
+  type GoogleIntent,
+} from "../utils/googleOAuthState";
+import { AppError } from "../utils/errors/AppError";
+import { ForbiddenError } from "../utils/errors/ForbiddenError";
+import { logError } from "../utils/logger";
 import { NotFoundError } from "../utils/errors/NotFoundError";
 import { UnauthorizedError } from "../utils/errors/UnauthorizedError";
 
@@ -98,20 +109,6 @@ router.post(
 );
 
 router.post(
-  "/google/register",
-  oauthLimiter,
-  asyncHandler(async (req, res) => {
-    const result = assertValid(validateGoogleAuthRequest(req.body));
-
-    const profile = await AuthService.getGoogleProfile(result.googleToken);
-    const { user, tokenVersion } = await AuthService.registerGoogle(profile);
-
-    setAuthCookies(res, { id: user.id, isAdmin: user.isAdmin, tokenVersion });
-    res.status(201).json(user);
-  }),
-);
-
-router.post(
   "/login",
   loginLimiter,
   asyncHandler(async (req, res) => {
@@ -127,19 +124,92 @@ router.post(
   }),
 );
 
-router.post(
-  "/google/login",
-  oauthLimiter,
+// ---------------------------------------------------------------------------
+// Google sign-in: authorization code flow with PKCE. The site loads nothing
+// from Google; the browser only goes there after the user clicks the button.
+// ---------------------------------------------------------------------------
+
+/** Error codes shown by the login/register pages (?erreur=...). */
+type GoogleError =
+  "cancelled" | "expired" | "failed" | "unverified" | "exists" | "not_found";
+
+const authPage = (intent: GoogleIntent) =>
+  intent === "register" ? "/inscription" : "/connexion";
+
+router.get("/google/start", (req, res) => {
+  const intent: GoogleIntent =
+    req.query.intent === "register" ? "register" : "login";
+  const attempt = {
+    state: randomToken(),
+    verifier: randomToken(),
+    nonce: randomToken(),
+    intent,
+    returnTo: safeReturnTo(req.query.returnTo),
+  };
+
+  // These responses set cookies: never let a cache (Cloudflare) keep them.
+  res.set("Cache-Control", "no-store");
+  setGoogleOAuthCookie(res, attempt);
+  res.redirect(303, AuthService.googleAuthUrl(attempt));
+});
+
+router.get(
+  "/google/callback",
+  googleCallbackLimiter,
   asyncHandler(async (req, res) => {
-    const result = assertValid(validateGoogleAuthRequest(req.body));
+    const attempt = readGoogleOAuthCookie(req);
+    res.set("Cache-Control", "no-store");
+    clearGoogleOAuthCookie(res);
 
-    const profile = await AuthService.getGoogleProfile(result.googleToken);
-    const { user, tokenVersion } = await AuthService.verifyCredentialsGoogle(
-      profile.email,
-    );
+    const fail = (error: GoogleError) =>
+      res.redirect(
+        303,
+        `${authPage(attempt?.intent ?? "login")}?erreur=${error}`,
+      );
 
+    const { code, state, error } = req.query;
+    if (
+      !attempt ||
+      typeof state !== "string" ||
+      !sameToken(state, attempt.state)
+    ) {
+      return fail("expired");
+    }
+    if (error === "access_denied") return fail("cancelled");
+    if (typeof code !== "string" || code.length > 2048) return fail("failed");
+
+    let profile;
+    try {
+      profile = await AuthService.exchangeGoogleCode(
+        code,
+        attempt.verifier,
+        attempt.nonce,
+      );
+    } catch (err) {
+      return fail(err instanceof ForbiddenError ? "unverified" : "failed");
+    }
+
+    let session;
+    try {
+      session =
+        attempt.intent === "register"
+          ? await AuthService.registerGoogle(profile)
+          : await AuthService.verifyCredentialsGoogle(profile.email);
+    } catch (err) {
+      if (err instanceof AppError && err.statusCode < 500) {
+        return fail(attempt.intent === "register" ? "exists" : "not_found");
+      }
+      logError(err, { operation: "auth.googleCallback" });
+      return fail("failed");
+    }
+
+    const { user, tokenVersion } = session;
     setAuthCookies(res, { id: user.id, isAdmin: user.isAdmin, tokenVersion });
-    res.status(200).json(user);
+    res.redirect(
+      303,
+      attempt.returnTo ??
+        (user.isAdmin && attempt.intent === "login" ? "/admin" : "/"),
+    );
   }),
 );
 

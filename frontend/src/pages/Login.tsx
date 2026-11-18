@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import { useAuth } from "../context/AuthContext";
 import styles from "./Auth.module.css";
 import { getApiErrorMessage, getApiStatus } from "../lib/apiError";
 import Input from "../components/form/Input";
+import { googleErrorMessage } from "../lib/googleAuth";
 
 interface LocationState {
   from?: { pathname: string };
@@ -12,7 +18,7 @@ interface LocationState {
 }
 
 export default function Login() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as LocationState)?.from?.pathname ?? null;
@@ -20,9 +26,21 @@ export default function Login() {
   const verified = (location.state as LocationState)?.verified ?? false;
 
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [error, setError] = useState(() =>
+    googleErrorMessage(searchParams.get("erreur")),
+  );
+
+  // The Google error was read into state above: drop it from the URL so a
+  // refresh doesn't show it again.
+  useEffect(() => {
+    if (!searchParams.has("erreur")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("erreur");
+    setSearchParams(next, { replace: true, state: location.state });
+  }, [searchParams, setSearchParams, location.state]);
+
   const [loading, setLoading] = useState(false);
-  const [gLoading, setGLoading] = useState(false);
 
   function redirect(isAdmin: boolean) {
     navigate(from ?? (isAdmin ? "/admin" : "/"), { replace: true });
@@ -57,25 +75,6 @@ export default function Login() {
     }
   }
 
-  async function handleGoogle(idToken: string) {
-    setGLoading(true);
-    setError("");
-    try {
-      const user = await loginWithGoogle(idToken);
-      redirect(user.isAdmin);
-    } catch (err: unknown) {
-      setError(
-        getApiErrorMessage(err, "Connexion Google échouée. Veuillez réessayer."),
-      );
-    } finally {
-      setGLoading(false);
-    }
-  }
-
-  function handleGoogleError() {
-    setError("Connexion Google annulée ou échouée.");
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.panel}>
@@ -88,19 +87,7 @@ export default function Login() {
           <h2 className={styles.title}>Bon retour</h2>
           <p className={styles.sub}>Connectez-vous à votre espace personnel</p>
 
-          <GoogleAuthButton
-
-            text="continue_with"
-
-            loading={gLoading}
-
-            loadingLabel="Connexion…"
-
-            onCredential={handleGoogle}
-
-            onError={handleGoogleError}
-
-          />
+          <GoogleAuthButton intent="login" returnTo={from} />
 
           <div className="divider-ornament" style={{ margin: "20px 0" }}>
             ou
@@ -155,7 +142,7 @@ export default function Login() {
               type="submit"
               className="btn btn-primary"
               style={{ width: "100%", marginTop: 4 }}
-              disabled={loading || gLoading}
+              disabled={loading}
             >
               {loading ? "Connexion…" : "Se connecter"}
             </button>

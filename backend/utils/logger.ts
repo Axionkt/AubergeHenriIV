@@ -34,6 +34,9 @@ export const logger = pino({
 /* -------------------------------------------------------------------------- */
 
 const SENSITIVE = /token|password|secret|authorization|cookie|key|hash/i;
+// OAuth callback parameters (Google sign-in): exact names, as "code" alone
+// would be too broad for a pattern.
+const SENSITIVE_EXACT = new Set(["code", "state", "nonce"]);
 
 /** Recursively redacts any key that looks like a secret (token, password, cookie, ...). */
 export function sanitizeLogData(
@@ -43,7 +46,7 @@ export function sanitizeLogData(
     Object.entries(obj).map(([key, value]) => {
       const normalizedKey = key.toLowerCase();
 
-      if (SENSITIVE.test(normalizedKey)) {
+      if (SENSITIVE.test(normalizedKey) || SENSITIVE_EXACT.has(normalizedKey)) {
         return [key, "[REDACTED]"];
       }
 

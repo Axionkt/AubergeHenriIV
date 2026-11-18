@@ -12,6 +12,7 @@ const schema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
   RESEND_API_KEY: z.string().min(1),
   STORAGE_ROOT: z.string().min(1),
   UPLOAD_TMP_DIR: z.string().optional(),

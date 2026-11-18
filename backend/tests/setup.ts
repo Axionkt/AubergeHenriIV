@@ -25,19 +25,19 @@ beforeAll(async () => {
   const { resetDatabase } = await import("./helpers");
   await resetDatabase();
 
-  // Google ID token verification is replaced by a fake that accepts
-  // "google:<email>" tokens, so no test talks to Google.
+  // The Google code exchange is replaced by a fake that accepts
+  // "google:<email>" codes, so no test talks to Google.
   const { default: AuthService } = await import("../services/AuthService");
   const { toGoogleProfile } = await import("../schemas/auth");
   const { UnauthorizedError } = await import(
     "../utils/errors/UnauthorizedError"
   );
-  vi.spyOn(AuthService, "getGoogleProfile").mockImplementation(
-    async (idToken) => {
-      if (!idToken.startsWith("google:")) {
-        throw new UnauthorizedError("Token Google invalide.");
+  vi.spyOn(AuthService, "exchangeGoogleCode").mockImplementation(
+    async (code) => {
+      if (!code.startsWith("google:")) {
+        throw new UnauthorizedError("Connexion Google invalide.");
       }
-      return toGoogleProfile({ email: idToken.slice("google:".length) });
+      return toGoogleProfile({ email: code.slice("google:".length) });
     },
   );
 });

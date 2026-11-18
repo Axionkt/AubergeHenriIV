@@ -23,6 +23,7 @@ export function applyTestEnv(): void {
   env.JWT_ACCESS_SECRET = "test-access-secret-at-least-32-characters-long";
   env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters-long";
   env.GOOGLE_CLIENT_ID = "test-google-client-id";
+  env.GOOGLE_CLIENT_SECRET = "test-google-client-secret";
   env.RESEND_API_KEY = "re_test_not_a_real_key";
   // Uploads land in a fresh temp folder, never in a real storage volume.
   env.STORAGE_ROOT ??= fs.mkdtempSync(

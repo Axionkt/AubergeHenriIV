@@ -11,7 +11,7 @@ The application is in real use. This public repository also serves as a portfoli
 | Area | What is in this repository |
 | --- | --- |
 | Authorization | Per-user, per-unit access grants with expiry, enforced in middleware before any data or file is returned |
-| Authentication | Email/password (bcrypt) and Google sign-in (verified ID token); short-lived JWT access tokens and revocable refresh tokens in `httpOnly` cookies |
+| Authentication | Email/password (bcrypt) and Google sign-in (server-side authorization code flow with PKCE); short-lived JWT access tokens and revocable refresh tokens in `httpOnly` cookies |
 | File security | Magic-byte type detection, random storage names, atomic moves, files served by nginx only after an authorization check (`X-Accel-Redirect`) |
 | Data | PostgreSQL 17 with plain SQL, a transactional migration runner, and `CHECK` constraints that mirror input validation |
 | Abuse resistance | Layered rate limiting keyed by IP, user or email; enumeration-safe auth responses; constant-time login path |
@@ -49,7 +49,7 @@ The Node process never streams large files, and there is no URL that bypasses th
 | Session theft through XSS | Tokens are only in `httpOnly` cookies. React escapes output, and rich text is rendered as React elements, never as raw HTML. A Content-Security-Policy is staged in report-only mode |
 | CSRF | `SameSite=Strict` cookies. The API parses JSON only (plus multipart on admin upload routes), never form-encoded bodies |
 | Stolen refresh token | The refresh cookie is scoped to `/api/auth/refresh`. Refresh tokens carry a `token_version`, which a password reset increments, revoking every existing session |
-| Forged Google login | The backend verifies the Google ID token's signature and audience (`google-auth-library`) and requires a verified Google email |
+| Forged Google login | Server-side code flow: `state` bound to a signed, short-lived cookie, PKCE, and `nonce`; the ID token's signature and audience are verified (`google-auth-library`) and a verified Google email is required |
 | Database leak exposing account links | Email verification and reset tokens are stored as SHA-256 hashes; only the emailed link holds the raw value. Reset links are single-use and expire after 1 hour |
 | Account enumeration | Forgot-password and resend-verification answer the same whether or not the account exists. Login gives one error for unknown emails and wrong passwords, and always runs bcrypt so timing doesn't tell them apart. (Registration is the deliberate exception, see below) |
 | Brute force and email flooding | Per-route rate limits keyed on what is being protected (failed logins per IP, reset emails per address, refresh per user). Security events are logged |
@@ -132,12 +132,13 @@ These accounts exist only in the dev seed, which the production compose file nev
 | `DB_PASSWORD` | PostgreSQL password |
 | `JWT_ACCESS_SECRET` | Signs 15-minute access tokens (32+ characters) |
 | `JWT_REFRESH_SECRET` | Signs 7-day refresh tokens (32+ characters) |
-| `GOOGLE_CLIENT_ID` | Audience the backend requires on Google ID tokens |
+| `GOOGLE_CLIENT_ID` | Google OAuth client; also the audience required on Google ID tokens |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret, used to exchange the sign-in code (secret) |
 | `RESEND_API_KEY` | Resend API key for transactional email |
 
 The compose files set the rest (`NODE_ENV`, `DB_*`, `STORAGE_ROOT`). Optional: `UPLOAD_TMP_DIR` (defaults to `STORAGE_ROOT/.tmp`, on the same volume so moves are atomic) and `LOG_LEVEL` (default `info`). `backend/config.ts` validates everything at startup and exits with a clear message if something is missing.
 
-The Google client ID is public, not a secret. The frontend's copy in `frontend/src/App.tsx` must match `GOOGLE_CLIENT_ID`.
+Google sign-in is a server-side redirect, so the frontend has no Google configuration. The Google console must list `<FRONTEND_URL>/api/auth/google/callback` as an authorized redirect URI.
 
 ## Deployment
 

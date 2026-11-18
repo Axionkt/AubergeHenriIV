@@ -6,7 +6,7 @@ The interesting engineering in this project is mostly server-side (see the [root
 
 ## Stack
 
-React 19, TypeScript, Vite, React Router 7, TanStack Query, Axios, dnd-kit (drag-and-drop media ordering), `@react-oauth/google`, CSS Modules.
+React 19, TypeScript, Vite, React Router 7, TanStack Query, Axios, dnd-kit (drag-and-drop media ordering), CSS Modules.
 
 ## Structure
 
@@ -32,7 +32,7 @@ The app never sees a token: the backend sets access and refresh tokens as `httpO
 - **Page load.** `AuthContext` calls `/auth/me`. On a 401 it tries one refresh and asks again, so a returning visitor whose 15-minute access token expired is still logged in (the refresh token lasts 7 days). If the refresh also fails, the visitor is anonymous.
 - **During use.** An Axios interceptor catches a 401 on any non-auth request, refreshes once, and replays the request. Concurrent 401s share a single in-flight refresh (`lib/auth.ts`). If the refresh fails, the session is over: cookies are cleared and the user is sent to the login page.
 - **Media pages.** The browser loads images and videos itself, so the interceptor can't retry them. Unit detail pages therefore refresh the token on a timer and whenever the tab becomes visible again (`hooks/useAccessTokenKeepAlive.ts`).
-- **Google sign-in.** Uses Google's own button (`components/GoogleAuthButton.tsx`), which returns an ID token that the backend verifies. The implicit-flow access token from `useGoogleLogin` couldn't be verified that way.
+- **Google sign-in.** `components/GoogleAuthButton.tsx` is a plain link to the backend's `/api/auth/google/start`, which runs the whole redirect flow. Errors come back as a `?erreur=` code, mapped to a message in `lib/googleAuth.ts`.
 - **Email links.** The verification page reads the token from its URL and POSTs it to the API, so link-prefetching email scanners can't verify an account by opening the link.
 
 ## Routing and authorization
@@ -68,4 +68,4 @@ In the Docker setup you don't normally run these yourself. The dev compose file 
 
 ## Configuration
 
-There are no runtime environment variables. The Google OAuth client ID is a public identifier, set in `src/App.tsx`, and must match the backend's `GOOGLE_CLIENT_ID`. Any future `VITE_*` variable is embedded at build time, so it would have to be passed as a Docker build argument.
+There are no runtime environment variables. Google sign-in is a plain link to the backend's `/api/auth/google/start`, so the frontend has no Google configuration and loads nothing from Google. Any future `VITE_*` variable is embedded at build time, so it would have to be passed as a Docker build argument.

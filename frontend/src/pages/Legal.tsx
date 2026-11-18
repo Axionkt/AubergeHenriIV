@@ -102,10 +102,11 @@ export default function Legal() {
           Vos données ne sont accessibles qu'aux propriétaires et aux
           prestataires techniques strictement nécessaires : l'hébergeur du site,
           Cloudflare (sécurité et diffusion du site), Resend (envoi des e-mails)
-          et Google (si vous choisissez la connexion avec Google). Certains de
-          ces prestataires peuvent traiter des données hors de l'Union
-          européenne, dans le cadre des garanties prévues par le RGPD (clauses
-          contractuelles types ou décision d'adéquation).
+          et Google (uniquement si vous choisissez la connexion avec Google : le
+          site ne contacte Google qu'au moment où vous cliquez sur ce bouton).
+          Certains de ces prestataires peuvent traiter des données hors de
+          l'Union européenne, dans le cadre des garanties prévues par le RGPD
+          (clauses contractuelles types ou décision d'adéquation).
         </p>
 
         <h3>Durée de conservation</h3>
