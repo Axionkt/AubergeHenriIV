@@ -27,7 +27,6 @@ backend/
 ├── config.ts          Environment variables, validated with Zod before anything else runs
 ├── db.ts              PostgreSQL connection pool
 ├── db/                migrate.ts (runner), migrations/ (numbered SQL), seed.sql (fake dev data)
-├── scripts/           One-off operator scripts (legacy media move)
 ├── jobs/              Scheduled jobs (node-cron)
 ├── middleware/        Authentication, authorization, rate limiting, request context, errors
 ├── routes/            HTTP layer: validate input, call a service, shape the response
@@ -158,17 +157,6 @@ Integrity is enforced in the database too, not only in Zod: a unique index allow
 | `010_media_created_at.sql` | `NOT NULL` media timestamps |
 
 Enum changes rebuild the type instead of using `ALTER TYPE ... ADD VALUE`, whose new value can't be used in the transaction that adds it.
-
-### Moving legacy media files
-
-Media uploaded before the current layout lives at `<unitId>/<originalName>-<id>.<ext>` (and `common-space/...`). It is served fine as is, since files are always read from `Media.file_path`. `scripts/moveLegacyMedia.ts` moves it to `<context>/<unitId>/<mediaId>.<ext>`, which also takes client file names off the disk, and updates each row:
-
-```bash
-docker compose -f docker-compose.prod.yml exec backend node build/scripts/moveLegacyMedia.js --dry-run
-docker compose -f docker-compose.prod.yml exec backend node build/scripts/moveLegacyMedia.js
-```
-
-Each file is renamed and then its row updated, but only if the row is unchanged. A failed update moves the file back. A run that stops halfway can be resumed: a file found at its new path with a stale row is just re-pointed. Missing files and paths outside the storage root are reported and left alone. Back up the database and the `storage` volume first anyway.
 
 To change the schema, add the next numbered file. Don't put `BEGIN`/`COMMIT` in it (the runner already wraps it), and don't quote table names (`000_init.sql` created them unquoted, so Postgres stores them in lowercase).
 
